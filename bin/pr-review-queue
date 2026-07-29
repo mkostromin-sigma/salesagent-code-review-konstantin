@@ -49,6 +49,10 @@ BASE_DIR="${PR_REVIEW_HOME:-${XDG_STATE_HOME:-${HOME}/.local/state}/pr-review-qu
 # Checkouts live in sibling worktrees named <repo-dir>-pr<NNNN> on branch
 # pr-<NNNN>-review. They are disposable: `manifest` resets each to the PR head the
 # diff was built from so the agents grep the code they actually review.
+# Optional config (written by install.sh) sets PR_REVIEW_WT_BASE when it is not
+# already in the environment; an explicit env var always wins.
+PR_REVIEW_CFG="${XDG_CONFIG_HOME:-${HOME}/.config}/pr-review-queue/config"
+[ -f "$PR_REVIEW_CFG" ] && . "$PR_REVIEW_CFG"
 WT_BASE="${PR_REVIEW_WT_BASE:-${HOME}/projects}"
 WT_PREFIX="$(basename "$ROOT")-pr"
 

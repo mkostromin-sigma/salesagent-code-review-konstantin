@@ -83,3 +83,8 @@ the synthesis + artifact contract is
 [`synthesis.md`](claude/skills/pr-review-queue/references/synthesis.md); the final prose
 pass is [`review-voice.md`](claude/skills/pr-review-queue/references/review-voice.md).
 Edit those to tune behavior.
+
+## License
+
+[MIT](LICENSE). If you build on or redistribute a derivative, please cite this
+repository as attribution — see the note at the end of `LICENSE`.

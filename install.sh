@@ -20,6 +20,26 @@ echo "claude skills:"
 for d in "$REPO"/claude/skills/*/; do link "${d%/}" "$CLAUDE/skills/$(basename "$d")"; done
 
 echo
+# Worktree base — where per-PR checkouts live, as siblings of your other clones:
+# <base>/<repo>-pr<NNNN>. It is machine-specific, so configure it here. An explicit
+# PR_REVIEW_WT_BASE in the environment always overrides this at run time.
+WT_BASE_DEFAULT="${PR_REVIEW_WT_BASE:-${HOME}/projects}"
+if [ -t 0 ] && [ -z "${PR_REVIEW_WT_BASE:-}" ]; then
+  printf 'Worktree base for per-PR checkouts [%s]: ' "$WT_BASE_DEFAULT"
+  read -r ans || true
+  [ -n "${ans:-}" ] && WT_BASE_DEFAULT="${ans/#\~/$HOME}"
+fi
+CFG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/pr-review-queue"
+mkdir -p "$CFG_DIR"
+cat > "$CFG_DIR/config" <<EOF
+# pr-review-queue configuration (written by install.sh; edit freely).
+# Where per-PR worktrees are created: <base>/<repo>-pr<NNNN>. An explicit
+# PR_REVIEW_WT_BASE in your environment overrides this.
+: "\${PR_REVIEW_WT_BASE:=${WT_BASE_DEFAULT}}"
+EOF
+echo "worktree base -> ${WT_BASE_DEFAULT}  (config: ${CFG_DIR}/config)"
+
+echo
 case ":${PATH}:" in
   *":${BIN}:"*) : ;;
   *) echo "WARNING: ${BIN} is not on your PATH — add it so 'pr-review-queue' resolves." ;;
