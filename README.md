@@ -87,4 +87,4 @@ Edit those to tune behavior.
 ## License
 
 [MIT](LICENSE). If you build on or redistribute a derivative, please cite this
-repository as attribution — see the note at the end of `LICENSE`.
+repository as attribution — see [`NOTICE`](NOTICE).
