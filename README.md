@@ -60,8 +60,10 @@ your per-PR approval before posting.
 
 ### Where things go (never in the target repo)
 
-- **Worktrees:** `~/projects/<repo>-pr<NNNN>`, reset by the driver to the exact PR head
-  the diff was built from (they are disposable; local scratch is not preserved).
+- **Worktrees:** `<worktree-base>/<repo>-pr<NNNN>` — the base is chosen at install
+  (default `~/projects`) and overridable per run with `PR_REVIEW_WT_BASE`. Reset by the
+  driver to the exact PR head the diff was built from (they are disposable; local
+  scratch is not preserved).
 - **Review outputs:** `~/.local/state/pr-review-queue/<owner>-<repo>/queue/<stamp>/`
   (`FINDINGS.md`, `DRAFT-COMMENT.md`, `REVIEW-INLINE.json`, `review-artifact.html` per run).
 

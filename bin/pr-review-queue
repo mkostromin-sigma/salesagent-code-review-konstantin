@@ -4,7 +4,8 @@
 # PR-review pipeline. Layer 2 (the 8-agent fan-out + synthesis) is driven by the
 # pr-review-queue skill, which consumes the manifest this script emits.
 #
-# WORKTREES: Checkouts use sibling worktrees ~/projects/<repo>-pr<NNNN>
+# WORKTREES: Checkouts use sibling worktrees <WT_BASE>/<repo>-pr<NNNN> (WT_BASE is
+# configurable — PR_REVIEW_WT_BASE or the install config; defaults to ~/projects)
 # (branch pr-<NNNN>-review). They are DISPOSABLE: each `manifest` run brings the
 # tree to the exact PR head the diff was built from ($fetched) — fast-forward on a
 # lag, hard-reset on a divergence (old HEAD recoverable via reflog). The review
@@ -170,7 +171,7 @@ prepare_pr() {
 
   capture_prior_comments "$pr" "${dir}/prior-comments.md"
 
-  # Sibling worktree at ~/projects/salesagent-pr<NNNN> on branch pr-<NNNN>-review.
+  # Sibling worktree at ${WT_BASE}/<repo>-pr<NNNN> on branch pr-<NNNN>-review.
   # Tree context for sibling greps only — scope is the local git diff above.
   local checkout="${WT_BASE}/${WT_PREFIX}${pr}"
   local branch="pr-${pr}-review"

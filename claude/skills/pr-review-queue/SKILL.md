@@ -38,7 +38,8 @@ pr-review-queue manifest $ARGUMENTS
 
 This prints (and saves) a `manifest.json` with, per PR: the author diff, changed
 files, prior human review comments, and a sibling worktree at
-`~/projects/<repo>-pr<NNNN>` (branch `pr-<NNNN>-review`). The review agents grep that
+`<worktree-base>/<repo>-pr<NNNN>` (branch `pr-<NNNN>-review`; the base is set at install,
+default `~/projects`, overridable with `PR_REVIEW_WT_BASE`). The review agents grep that
 worktree, so the driver brings it to the **exact PR head the diff was built from** on
 every run — fast-forward on a lag, hard-reset on a divergence (the old HEAD stays
 recoverable via `git reflog`). These worktrees are disposable: worktree ≡ diff scope is

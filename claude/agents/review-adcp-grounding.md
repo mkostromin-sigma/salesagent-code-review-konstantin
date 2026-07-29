@@ -32,8 +32,8 @@ everything else — including the installed `adcp` SDK — is derived and can di
 2. Confirm the authoritative version: the version the repo currently PINS
    (AdCP `3.1 GA`), UNLESS a bump/migration to a different
    target is in flight — then that TARGET is the pin. Check `docs/adcp-spec-version.md`.
-3. Locate the spec sources (repo `github.com/adcontextprotocol/adcp`, local checkout
-   at `~/projects/adcp`):
+3. Locate the spec sources (repo `github.com/adcontextprotocol/adcp`; if you keep a
+   local checkout — e.g. at `~/projects/adcp` — grep it directly, otherwise fetch):
    - prose: `dist/docs/<version>/building/implementation/*.mdx`
    - graded executable contract: `dist/compliance/<version>/*.yaml`
    - pinned enum/schema refs for BDD semantics AdCP 3.1 GA.
