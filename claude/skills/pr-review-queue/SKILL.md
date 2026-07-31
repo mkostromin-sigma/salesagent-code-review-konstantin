@@ -19,6 +19,10 @@ deterministic local review artifact → you approve → post.
 prepares the same Layer-2 inputs from the live dirty tree (no PR, no GitHub post).
 Cursor skill `/salesagent-code-review-konstantin` with empty/`wt`/paths uses this.
 
+**Cursor model policy (HARD):** when this skill is driven from Cursor / `salesagent-sdlc`,
+every Task (8 agents + synthesis) **omits** `model` (inherit Auto). Never pin
+`claude-opus-*`, `claude-sonnet-*`, or any other provider slug from this path.
+
 Three layers. You run this skill; it drives all three and STOPS for your approval
 before anything reaches GitHub. There is no separate orchestration engine — the skill
 itself fans the agents out (Layer 2), so it works anywhere the agents and `bin/`

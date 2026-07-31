@@ -56,7 +56,13 @@ Handoff artifact (Phase 4 consumes):
 - PR: `~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md`
 - Working-tree (standalone / pre-PR): `~/.cursor/reviews/wt-salesagent-code-review-konstantin.md`
 
+Full run record (FINDINGS / drafts / HTML):
+
+`~/.cursor/reports/salesagent-code-review-konstantin/<owner>-<repo>/queue/<stamp>/`
+
 SDLC Phase 3 always uses **PR mode** (leaf PR from Phase 2). Working-tree mode is for standalone `/salesagent-code-review-konstantin` (empty/`wt`/paths) before a PR exists.
+
+**Model:** Cursor / SDLC path always omits Task `model` (Auto inherit) — never pin Anthropic/GPT/Composer/Grok.
 
 ## Git remotes (HARD)
 

@@ -28,10 +28,9 @@ If args are only **`help`** / **`?`**: Russian cheat-sheet; **stop**.
 /salesagent-code-review-konstantin                      → working tree vs merge-base(main)
 /salesagent-code-review-konstantin wt [--base REF] [path...]
 
-8 agents (dry, testing, python-practices, consistency, layering,
-  adcp-grounding, ratchet-allowlists, bdd-grounding) + synthesis
+8 agents + synthesis — Task model: inherit Auto ONLY (never pin Anthropic/GPT/…)
 Layer 1: $REPO/bin/pr-review-queue manifest <N> | manifest wt
-Artifacts: run dir under ~/.local/state/pr-review-queue/…
+Run dir:   ~/.cursor/reports/salesagent-code-review-konstantin/<owner>-<repo>/queue/<stamp>/
 Handoff PR: ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md
 Handoff wt: ~/.cursor/reviews/wt-salesagent-code-review-konstantin.md
 GitHub post: opt-in only (PR mode); wt mode cannot post
@@ -59,7 +58,7 @@ If missing, stop and tell the user to clone the fork and run `./install.sh`.
 
 1. **Read-only on product code** unless the user explicitly asks for a fix.
 2. **Never post to GitHub** unless the user clearly opts in this turn (`post to GitHub`, `pr-review-queue post`, etc.). SDLC Phase 3 never opts in.
-3. **Omit `model` on Task** (inherit session / Auto). Never pin Opus from this skill.
+3. **Model = Auto only (HARD).** On **every** Task (8 reviewers + synthesis): **omit** the `model` argument so subagents inherit the parent session (Auto). **Forbidden:** pinning `claude-opus-*`, `claude-sonnet-*`, `anthropic`, `gpt-*`, `composer-*`, `grok-*`, or any other slug. Do not “upgrade for quality.” Record in the chat/handoff validation line: `subagent_model: inherit (session/Auto)`.
 4. **One PR per SDLC/Cursor review run** when invoked from `salesagent-sdlc` (pass the leaf PR). Standalone multi-PR queue mode is optional and out of SDLC Phase 3.
 5. Fan-out agents via **Task** (mandatory). Do not invent a serial one-agent shortcut unless Task is unavailable — then say so and run sequentially.
 
@@ -131,7 +130,7 @@ In **one** PM/parent turn, launch **eight** Tasks (`generalPurpose` or equivalen
 3. Pass absolute paths from the manifest: `diff`, `changed_files`, `checkout`, `prior_comments`.
 4. Write findings only to `<review_dir>/review-<name>.md`.
 5. Do not modify product source. Final chat line = one-line status only.
-6. **Omit `model`.**
+6. **Omit `model` (Auto inherit). Never pass a model slug.**
 
 | Agent file | Dimension |
 |---|---|
@@ -153,6 +152,7 @@ Launch one Task that:
 1. Reads `synthesis.md` + `review-voice.md` + all `<review_dir>/review-*.md`
 2. Writes `<review_dir>/FINDINGS.md`, `DRAFT-COMMENT.md`, `REVIEW-INLINE.json` per synthesis contract
 3. Does **not** post
+4. **Omit `model` (Auto inherit)** — same HARD gate as the eight reviewers
 
 ### 4. Cursor handoff (SDLC / personal artifact policy)
 
@@ -169,7 +169,9 @@ File contents (English):
 
 - Severity-ordered findings. Map Konstantin's single **Should fix** tier → `SHOULD-FIX` in the handoff header (SDLC fix-all treats all severities as mandatory; Notes stay Notes / FOLLOW-UP only when clearly out-of-scope).
 - Each finding: `file:line`, mechanism, evidence, why tests miss it, fix.
-- Pointers to absolute paths: `FINDINGS.md`, `DRAFT-COMMENT.md`, run dir.
+- Pointers to absolute paths: `FINDINGS.md`, `DRAFT-COMMENT.md`, run dir under
+  `~/.cursor/reports/salesagent-code-review-konstantin/…`
+- Validation line: `subagent_model: inherit (session/Auto)`
 - If the synthesized finding list is empty: **do not** write the handoff file; say clean in chat only.
 
 Optional (standalone, not SDLC): `"$REPO_ROOT/bin/pr-review-queue" artifact --open` for the HTML page. Do **not** require HTML for SDLC completion. **`post` is PR-only** — refuse for wt mode.

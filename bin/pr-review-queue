@@ -50,11 +50,14 @@ REPO="${PR_REVIEW_REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner 2>
 [ -n "${REPO:-}" ] || { echo "pr-review-queue: cannot determine repo (set PR_REVIEW_REPO=owner/name)" >&2; exit 1; }
 REPO_URL="https://github.com/${REPO}.git"
 REPO_SLUG="${REPO//\//-}"
-# Outputs live under XDG state, keyed by repo — never in the target tree.
-BASE_DIR="${PR_REVIEW_HOME:-${XDG_STATE_HOME:-${HOME}/.local/state}/pr-review-queue}/${REPO_SLUG}"
-# Optional config (written by install.sh) may set PR_REVIEW_WT_BASE for legacy.
+# Optional config (written by install.sh) may set PR_REVIEW_HOME / legacy WT_BASE.
 PR_REVIEW_CFG="${XDG_CONFIG_HOME:-${HOME}/.config}/pr-review-queue/config"
 [ -f "$PR_REVIEW_CFG" ] && . "$PR_REVIEW_CFG"
+# Run artifacts under ~/.cursor/reports (personal Cursor layout) — never the
+# salesagent tree. Override with PR_REVIEW_HOME.
+PR_REVIEW_HOME="${PR_REVIEW_HOME:-${HOME}/.cursor/reports/salesagent-code-review-konstantin}"
+BASE_DIR="${PR_REVIEW_HOME}/${REPO_SLUG}"
+mkdir -p "$BASE_DIR"
 WT_BASE="${PR_REVIEW_WT_BASE:-${HOME}/Documents/code/sigma}"
 WT_PREFIX="$(basename "$ROOT")-pr"
 # Canonical lane root (same as salesagent-dev ensure-pr-worktree.sh):
