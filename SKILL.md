@@ -69,6 +69,7 @@ If missing, stop and tell the user to clone the fork and run `./install.sh`.
 3. **Model = Auto only (HARD).** On **every** Task (8 reviewers + synthesis): **omit** the `model` argument so subagents inherit the parent session (Auto). **Forbidden:** pinning `claude-opus-*`, `claude-sonnet-*`, `anthropic`, `gpt-*`, `composer-*`, `grok-*`, or any other slug. Do not “upgrade for quality.” Record in the chat/handoff validation line: `subagent_model: inherit (session/Auto)`.
 4. **One PR per SDLC/Cursor review run** when invoked from `salesagent-sdlc` (pass the leaf PR). Standalone multi-PR queue mode is optional and out of SDLC Phase 3.
 5. Fan-out agents via **Task** (mandatory). Do not invent a serial one-agent shortcut unless Task is unavailable — then say so and run sequentially.
+6. **Never run tests / quality locally (HARD).** Review = read diff + source only. **Forbidden** in orchestrator and every nested Task: `pytest`, `tox`, `make quality`, `make test*`, `./run_all_tests.sh`, `scripts/run-test.sh`, `agent-db`, Docker test stacks. Rely on GitHub Actions CI for execution. Bash/`rg`/`grep`/`wc` for inspection is OK.
 
 ## GitHub post vs local drafts (HARD GATE)
 
@@ -89,7 +90,7 @@ Resolve one surface:
 | empty, `wt`, `working-tree`, or explicit path(s) without a PR | **working-tree** | `pr-review-queue manifest wt [--base REF] [-- path...]` |
 
 - **Salesagent workspace:** cwd for `pr-review-queue` must be a **salesagent** checkout (not this harness repo). Prefer Phase 2 `WT_PATH` if provided; else the open workspace root if it looks like salesagent (`AGENTS.md` / `CLAUDE.md` + `src/`).
-- Set `PR_REVIEW_REPO=prebid/salesagent` when the cwd remote is a fork (so PR manifests target upstream PRs). For **wt** mode this is still used as the state-dir key; `gh` is not required for the diff itself.
+- **GitHub repo:** resolved automatically — `upstream` remote → else `gh repo view` (fork parent if any) → else `origin`. Same fork layout as Dev/SDLC (`origin` = fork, `upstream` = `prebid/salesagent`). Do **not** export `PR_REVIEW_REPO` unless debugging an unusual remote layout.
 - **Base ref (wt):** default tries `upstream/main`, `origin/main`, `main`, `master`. Override with `--base` or env `PR_REVIEW_BASE`.
 - **Path filter (wt):** optional pathspecs after `wt` (or after `--`) limit the diff — same idea as chris/nicolas path/glob mode.
 - **Empty diff (wt):** Layer 1 fails loud — nothing to review (clean tree vs base).
@@ -113,7 +114,6 @@ From the **salesagent** tree (or `$WT_PATH`):
 **PR mode:**
 
 ```bash
-export PR_REVIEW_REPO="${PR_REVIEW_REPO:-prebid/salesagent}"
 # Optional — only if Dev lane is NOT at …/.git/.worktrees/pr-<N>:
 # export PR_REVIEW_CHECKOUT="$WT_PATH"
 "$REPO_ROOT/bin/pr-review-queue" manifest <N>
@@ -129,7 +129,6 @@ Checkout resolution (PR mode) — **no env required** in the common case:
 **Working-tree mode** (empty arg / `wt` / pathspecs):
 
 ```bash
-export PR_REVIEW_REPO="${PR_REVIEW_REPO:-prebid/salesagent}"
 # optional: export PR_REVIEW_BASE=upstream/main
 "$REPO_ROOT/bin/pr-review-queue" manifest wt [--base REF] [-- path...]
 ```
@@ -148,6 +147,7 @@ In **one** PM/parent turn, launch **eight** Tasks (`generalPurpose` or equivalen
 4. Write findings only to `<review_dir>/review-<name>.md`.
 5. Do not modify product source. Final chat line = one-line status only.
 6. **Omit `model` (Auto inherit). Never pass a model slug.**
+7. **Never run tests / `make quality` / tox** — inspect with Read/Grep/rg only; CI is GitHub Actions.
 
 | Agent file | Dimension |
 |---|---|

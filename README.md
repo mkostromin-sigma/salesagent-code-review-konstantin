@@ -75,8 +75,9 @@ Claude Code interactive posting still requires per-PR approval + `PR_REVIEW_ALLO
 - **Queue scratch only:** `~/.cursor/reviews/.konstantin-queue/<owner>-<repo>/queue/<stamp>/`
   (`FINDINGS.md`, drafts, HTML). Override with `PR_REVIEW_HOME`. Not what Phase 4 greps.
 
-Override with `PR_REVIEW_REPO`, `PR_REVIEW_HOME`, `PR_REVIEW_CHECKOUT` / `WT_PATH`,
+Override with `PR_REVIEW_HOME`, `PR_REVIEW_CHECKOUT` / `WT_PATH`,
 `SALESAGENT_WORKTREES`, `PR_REVIEW_INCLUDE_CONFLICTING=1`.
+(`PR_REVIEW_REPO` is optional override only — normally resolved from `upstream` / `gh` / `origin`.)
 
 ## Review model
 

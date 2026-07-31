@@ -46,8 +46,58 @@ set -euo pipefail
 # outputs live in BASE_DIR, both OUTSIDE the target repo, so this tool leaves no
 # footprint in the project it reviews.
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "pr-review-queue: not inside a git repo" >&2; exit 1; }
-REPO="${PR_REVIEW_REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)}"
-[ -n "${REPO:-}" ] || { echo "pr-review-queue: cannot determine repo (set PR_REVIEW_REPO=owner/name)" >&2; exit 1; }
+
+# Resolve owner/repo for gh PR ops (same idea as salesagent-dev: prefer upstream
+# when cwd is a personal fork). PR_REVIEW_REPO is an optional override only.
+owner_repo_from_url() {
+  # git@host:owner/repo.git | https://host/owner/repo(.git)
+  local url="$1"
+  if [[ "$url" =~ github[^:/]*[:/]([^/]+)/([^/.]+)(\.git)?$ ]]; then
+    printf '%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    return 0
+  fi
+  return 1
+}
+
+resolve_github_repo() {
+  local url repo json parent
+  if [ -n "${PR_REVIEW_REPO:-}" ]; then
+    printf '%s\n' "$PR_REVIEW_REPO"
+    return 0
+  fi
+  # 1) upstream remote (fork workflow — PRs live on the canonical repo)
+  url="$(git -C "$ROOT" remote get-url upstream 2>/dev/null || true)"
+  if [ -n "$url" ] && repo="$(owner_repo_from_url "$url")"; then
+    printf '%s\n' "$repo"
+    return 0
+  fi
+  # 2) gh: if this checkout is a GitHub fork, use parent; else nameWithOwner
+  json="$(gh repo view --json nameWithOwner,isFork,parent 2>/dev/null || true)"
+  if [ -n "$json" ]; then
+    parent="$(printf '%s' "$json" | jq -r 'if .isFork and .parent.nameWithOwner then .parent.nameWithOwner else empty end' 2>/dev/null || true)"
+    if [ -n "$parent" ]; then
+      printf '%s\n' "$parent"
+      return 0
+    fi
+    repo="$(printf '%s' "$json" | jq -r '.nameWithOwner // empty' 2>/dev/null || true)"
+    if [ -n "$repo" ]; then
+      printf '%s\n' "$repo"
+      return 0
+    fi
+  fi
+  # 3) origin remote as last resort
+  url="$(git -C "$ROOT" remote get-url origin 2>/dev/null || true)"
+  if [ -n "$url" ] && repo="$(owner_repo_from_url "$url")"; then
+    printf '%s\n' "$repo"
+    return 0
+  fi
+  return 1
+}
+
+REPO="$(resolve_github_repo)" || {
+  echo "pr-review-queue: cannot determine GitHub owner/repo from upstream/gh/origin" >&2
+  exit 1
+}
 REPO_URL="https://github.com/${REPO}.git"
 REPO_SLUG="${REPO//\//-}"
 # Optional config (written by install.sh) may set PR_REVIEW_HOME / legacy WT_BASE.

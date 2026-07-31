@@ -170,6 +170,10 @@ Tests that exemplify good testing practices in this codebase:
 ## Rules
 
 - READ-ONLY for source code. Only write to your assigned output file.
+- **Never run the test suite.** Judge quality by reading tests + production code in
+  the diff. Forbidden: `pytest`, `tox`, `make quality`, `make test*`,
+  `./run_all_tests.sh`, `scripts/run-test.sh`, Docker/agent-db test stacks. CI on
+  GitHub Actions owns execution. Bash is for `rg`/`grep`/`wc`/`git` inspect only.
 - For every finding, explain WHY the test fails to verify behavior.
 - Do NOT suggest adding more tests -- that's a different review. Focus on
   whether EXISTING tests actually work.

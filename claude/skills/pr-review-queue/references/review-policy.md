@@ -95,6 +95,13 @@ as a fresh standard.
 
 ## Testing bar
 
+**Never execute the test suite (HARD).** Review agents judge tests by reading the diff
+and source (`Read` / `Grep` / `wc` / `rg`). **Forbidden:** `pytest`, `tox`,
+`make quality`, `make test*`, `./run_all_tests.sh`, `scripts/run-test.sh`,
+`agent-db`, Docker test stacks, or any command whose purpose is to *run* tests or the
+quality gate. CI on GitHub Actions is the execution authority — this review does not
+re-run it locally.
+
 Missing test coverage for changed behavior is a Should fix. Unit tests are NOT accepted
 as proof of functionality. BDD scenarios — wired, executing, across all four transports
 — are the verification bar. A behavior change pinned only by mock-heavy `_impl` unit
@@ -111,7 +118,8 @@ The BDD grounding contract: the scenario says WHAT (Given/When/Then are transpor
 `model_dump()` fallback that only proves model self-consistency); and
 `make check-dormant` says whether it ran at all (`"No harness wired"` = it auto-xfailed
 and never executed). A step that hand-rolls envelope extraction, hand-stashes ctx, or
-asserts via `model_dump()` is a Should fix.
+asserts via `model_dump()` is a Should fix. Judge dormancy / wiring by **reading**
+scripts and configs — do not invoke `make check-dormant` or the suite during review.
 
 ## Ratchets
 

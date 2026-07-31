@@ -28,6 +28,9 @@ every Task (8 agents + synthesis) **omits** `model` (inherit Auto). Never pin
 chris/nicolas). After fix+push: `mv` → `~/.cursor/reviews/done/` (never `rm`).
 Queue run dirs under `~/.cursor/reviews/.konstantin-queue/…` are scratch only.
 
+**Never run tests locally (HARD):** nested agents judge coverage/quality by reading
+code. Do not invoke pytest/tox/`make quality`/test stacks — GitHub Actions CI owns that.
+
 Three layers. You run this skill; it drives all three and STOPS for your approval
 before anything reaches GitHub. There is no separate orchestration engine — the skill
 itself fans the agents out (Layer 2), so it works anywhere the agents and `bin/`
