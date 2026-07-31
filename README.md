@@ -1,17 +1,15 @@
 # Prebid Sales Agent PR Review
 
 Automated multi-agent code review for the [prebid/salesagent](https://github.com/prebid/salesagent)
-repository. It **operates on** whatever git repo you run it in but is **not part of**
-any project — it installs into `~/.local/bin` and `~/.claude/` by symlink and leaves no
-footprint in the repos it reviews (worktrees and all review outputs live outside the
-target tree).
+repository. **Cursor-native** (plugin + skill + `agents/` as Task types) — same shape as
+`salesagent-code-review-chris`. It **operates on** whatever git repo you run it in but is
+**not part of** any project — installs by symlink and leaves no footprint in the repos it
+reviews.
 
 Eight review agents each grade one dimension of a PR's diff; a synthesis step dedups
 across them, verifies each finding against the checked-out code, and produces one
-GitHub-ready review (a body comment plus inline comments anchored to changed lines).
-The review is written to disk and rendered as a self-contained local HTML page — it
-posts nothing until you **explicitly** approve a publish. **Cursor / `salesagent-sdlc`:**
-never post (local `~/.cursor/reviews/` + drafts only); same policy as chris/nicolas.
+GitHub-ready draft (body + inline anchors). **Cursor / `salesagent-sdlc`:** never post
+(local `~/.cursor/reviews/` + drafts only); same policy as chris/nicolas.
 
 Reviews are written in the voice of a senior Python architect: pragmatic, direct, and
 grounded in the mechanism of each defect rather than adjectives.
@@ -19,28 +17,28 @@ grounded in the mechanism of each defect rather than adjectives.
 ## Contents
 
 ```
-bin/pr-review-queue                       # driver: scout/setup (Layer 1) + present/post (Layer 3)
-bin/pr-radar                              # "which PRs need my attention" bucketing tool
-bin/pr-review-artifact                    # deterministic HTML assembler for a run
-claude/agents/review-*.md                 # the 8 review agents (see below)
-claude/skills/pr-review-queue/SKILL.md    # /pr-review-queue — the one-command surface (drives Layer 2)
-claude/skills/pr-review-queue/references/ # review-policy.md, synthesis.md, review-voice.md
+.cursor-plugin/plugin.json                # Cursor plugin manifest
+agents/review-*.md                        # Task subagent_type = stem (Cursor-primary)
+skills/salesagent-code-review-konstantin/ # Cursor orchestrator skill
+commands/…                                # slash alias
+bin/pr-review-queue                       # Layer 1 scout/setup + gated Layer 3 post
+bin/pr-radar                              # maintainer review-queue radar
+bin/pr-review-artifact                    # deterministic HTML assembler
+claude/                                   # OPTIONAL Claude Code dual path (INSTALL_CLAUDE=1)
 ```
 
 The eight agents: `review-dry`, `review-testing`, `review-python-practices`,
-`review-consistency`, `review-layering` (general code-quality dimensions), plus
-`review-adcp-grounding`, `review-bdd-grounding`, `review-ratchet-allowlists`
-(salesagent/AdCP-specific). All ship in this repo — no external plugin is required.
+`review-consistency`, `review-layering`, `review-adcp-grounding`,
+`review-bdd-grounding`, `review-ratchet-allowlists`.
 
 ## Install
 
 ```bash
-./install.sh          # symlinks bin/* -> ~/.local/bin, claude/agents + skills -> ~/.claude/*
+./install.sh                 # Cursor plugin + skill + bin (default; no Claude Code)
+INSTALL_CLAUDE=1 ./install.sh  # also symlink ~/.claude/ agents+skill
 ```
 
-Ensure `~/.local/bin` is on your `PATH`, and use [Claude Code](https://claude.com/claude-code)
-so the skill and agents resolve. Editing a file here updates the live install (symlinks
-point back at this repo, the source of truth).
+Reload Cursor after install. Editing files here updates the live install (symlinks).
 
 ## Use
 

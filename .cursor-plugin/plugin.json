@@ -1,0 +1,17 @@
+{
+  "name": "salesagent-code-review-konstantin",
+  "version": "1.0.0",
+  "description": "Multi-agent dimensional PR review for Prebid Sales Agent (Cursor)",
+  "author": {
+    "name": "mkostromin-sigma"
+  },
+  "license": "MIT",
+  "keywords": [
+    "salesagent",
+    "review",
+    "adcp",
+    "prebid",
+    "konstantin"
+  ],
+  "repository": "https://github.com/mkostromin-sigma/salesagent-code-review-konstantin"
+}

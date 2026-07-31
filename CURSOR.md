@@ -1,49 +1,37 @@
 # Cursor / salesagent-sdlc integration
 
-This fork is installed beside the other personal review checkouts:
+## Idiomatic Cursor layout (same as chris)
 
 ```text
-~/Documents/code/sigma/salesagent-code-review-chris/
-~/Documents/code/sigma/salesagent-code-review-nicolas/
-~/Documents/code/sigma/salesagent-code-review-nicolas-with-claude/
-~/Documents/code/sigma/salesagent-code-review-konstantin/   ← this repo
+salesagent-code-review-konstantin/
+  .cursor-plugin/plugin.json
+  agents/review-*.md              # Task subagent_type = filename stem
+  skills/salesagent-code-review-konstantin/SKILL.md   # orchestrator
+  commands/salesagent-code-review-konstantin.md
+  bin/pr-review-queue             # Layer 1 deterministic (not LLM)
+  SKILL.md                        # thin skill-root shim → skills/…/SKILL.md
+  claude/                         # OPTIONAL Claude Code dual path
 ```
 
-## Cursor discovery
+Fan-out: `Task(subagent_type="review-dry"|…)` — **not** `generalPurpose` + paste agent md.
+Claude Code install is **opt-in** (`INSTALL_CLAUDE=1`); Cursor / SDLC never need it.
+
+## Install
 
 ```bash
 ./install.sh
-# or non-interactive:
-PR_REVIEW_INSTALL_NONINTERACTIVE=1 ./install.sh
+# or non-interactive defaults already non-interactive:
+./install.sh
+INSTALL_CLAUDE=1 ./install.sh   # only if you also use Claude Code
 ```
 
-- Symlinks this checkout to `~/.cursor/skills/salesagent-code-review-konstantin`
-- Symlinks `bin/*` → `~/.local/bin`
-- Optionally keeps Claude Code links under `~/.claude/` (`SKIP_CLAUDE_INSTALL=1` to skip)
+- Plugin → `~/.cursor/plugins/local/salesagent-code-review-konstantin`
+- Skill → `~/.cursor/skills/salesagent-code-review-konstantin`
+- Bins → `~/.local/bin`
 
-Slash command: **`/salesagent-code-review-konstantin`** (see root [`SKILL.md`](SKILL.md)).
+Reload Cursor after install.
 
-Targets:
-
-```bash
-# From a salesagent checkout:
-pr-review-queue manifest 1699              # auto: .git/.worktrees/pr-1699 or pr-1699-1…
-pr-review-queue manifest wt                # working tree vs merge-base(main)
-pr-review-queue manifest wt --base upstream/main -- src/core/
-```
-
-PR checkouts live under **`salesagent/.git/.worktrees/`** (same canon as
-`salesagent-dev` / `ensure-pr-worktree.sh`). No `PR_REVIEW_CHECKOUT` export needed
-when the Dev lane is the usual `pr-<N>` path.
-
-| Path | Role |
-|---|---|
-| `pr-<N>` | Dev labor lane — reused when tip matches and tree is clean |
-| `pr-<N>-1`, `pr-<N>-2`, … | Review-only alts when labor lane is dirty / wrong tip |
-
-## salesagent-sdlc Phase 3
-
-SDLC launches this skill as **Reviewer C** in parallel with:
+## Phase 3 (SDLC)
 
 | | Skill |
 |--|-------|
@@ -51,29 +39,29 @@ SDLC launches this skill as **Reviewer C** in parallel with:
 | B | `salesagent-code-review-nicolas` |
 | C | `salesagent-code-review-konstantin` (this) |
 
-**Canonical review** (same trio as chris/nicolas; after fix+push: `mv` → `reviews/done/`, never `rm`):
+**Canonical review** (same trio; after fix+push: `mv` → `reviews/done/`, never `rm`):
 
 - PR: `~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md`
-- Working-tree (standalone / pre-PR): `~/.cursor/reviews/wt-salesagent-code-review-konstantin.md`
+- Working-tree: `~/.cursor/reviews/wt-salesagent-code-review-konstantin.md`
 
-Queue scratch only (FINDINGS / drafts / HTML — not what Phase 4 greps):
+Queue scratch only:
 
 `~/.cursor/reviews/.konstantin-queue/<owner>-<repo>/queue/<stamp>/`
 
-SDLC Phase 3 always uses **PR mode** (leaf PR from Phase 2). Working-tree mode is for standalone `/salesagent-code-review-konstantin` (empty/`wt`/paths) before a PR exists.
+**GitHub post (HARD):** never from Cursor/SDLC. Drafts local.
+`PR_REVIEW_DRAFT_ONLY=1`; real post needs user opt-in + `PR_REVIEW_ALLOW_POST=1`.
 
-**GitHub post (HARD — same as SDLC / nicolas):** never publish from Cursor/SDLC. Drafts stay local. Real `pr-review-queue post` needs explicit user opt-in this turn + `PR_REVIEW_ALLOW_POST=1` (`PR_REVIEW_DRAFT_ONLY=1` by default).
+**Model:** omit Task `model` (Auto inherit).
 
-**Model:** Cursor / SDLC path always omits Task `model` (Auto inherit) — never pin Anthropic/GPT/Composer/Grok.
+**Tests:** never run locally — GitHub Actions owns CI.
 
 ## Git remotes (HARD)
 
 - **origin** = `mkostromin-sigma/salesagent-code-review-konstantin` only
 - Do **not** push to `KonstantinMirin/prebid-salesagent-pr-review`
-- Optional `upstream` may be fetch-only for syncing; push URL must stay unset / disabled
+- Optional `upstream` may be fetch-only
 
 ## See also
 
-- Upstream Claude skill: `claude/skills/pr-review-queue/SKILL.md`
-- Driver: `bin/pr-review-queue`
-- Limitations after Cursor migration: ask the installer / see the SDLC migration report in chat when this skill was first wired
+- Root orchestrator: [`skills/salesagent-code-review-konstantin/SKILL.md`](skills/salesagent-code-review-konstantin/SKILL.md)
+- Layer policy: [`claude/skills/pr-review-queue/references/review-policy.md`](claude/skills/pr-review-queue/references/review-policy.md)

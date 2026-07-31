@@ -1,41 +1,81 @@
 #!/usr/bin/env bash
 #
-# Install tooling for Cursor + optional Claude Code.
-# Symlinks into ~/.local/bin, ~/.cursor/skills/, and (optionally) ~/.claude/.
-# Never writes into the salesagent product tree.
+# Install Cursor-native plugin + skill + bins.
+# Claude Code links are OPT-IN (INSTALL_CLAUDE=1).
 #
-# Push policy: this checkout's origin must be mkostromin-sigma/salesagent-code-review-konstantin.
-# Do not add a push URL for KonstantinMirin/prebid-salesagent-pr-review.
+# Push policy: origin = mkostromin-sigma/salesagent-code-review-konstantin only.
 #
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${HOME}/.local/bin"
 CURSOR_SKILLS="${HOME}/.cursor/skills"
-CLAUDE="${HOME}/.claude"
-mkdir -p "$BIN" "$CURSOR_SKILLS"
+LOCAL_PLUGINS="${HOME}/.cursor/plugins/local"
+PLUGIN_DEST="${LOCAL_PLUGINS}/salesagent-code-review-konstantin"
+mkdir -p "$BIN" "$CURSOR_SKILLS" "$LOCAL_PLUGINS"
 
 link() { ln -sfn "$1" "$2"; printf '  %s -> %s\n' "$2" "$1"; }
 
-echo "bin (on PATH):"
-for f in "$REPO"/bin/*; do link "$f" "$BIN/$(basename "$f")"; done
+require_file() {
+  if [ ! -e "$1" ]; then
+    echo "error: missing required file: $1" >&2
+    exit 1
+  fi
+}
 
-echo "Cursor skill:"
-# Whole-repo symlink so SKILL.md + bin/ + claude/ resolve from one discovery root
+require_file "${REPO}/.cursor-plugin/plugin.json"
+require_file "${REPO}/skills/salesagent-code-review-konstantin/SKILL.md"
+require_file "${REPO}/agents/review-dry.md"
+require_file "${REPO}/bin/pr-review-queue"
+
+agent_count="$(find "${REPO}/agents" -maxdepth 1 -name 'review-*.md' | wc -l | tr -d ' ')"
+if [ "${agent_count}" -lt 8 ]; then
+  echo "error: expected ≥8 agents/review-*.md, found ${agent_count}" >&2
+  exit 1
+fi
+
+echo "bin (on PATH):"
+for f in "$REPO"/bin/*; do
+  [ -f "$f" ] || continue
+  case "$(basename "$f")" in
+    __pycache__|*.pyc) continue ;;
+  esac
+  link "$f" "$BIN/$(basename "$f")"
+done
+
+echo "Cursor plugin (agents → Task subagent_type):"
+if [ -L "${PLUGIN_DEST}" ] || [ -e "${PLUGIN_DEST}" ]; then
+  if [ -L "${PLUGIN_DEST}" ]; then
+    current="$(readlink "${PLUGIN_DEST}")"
+    if [ "${current}" = "${REPO}" ]; then
+      echo "  Already installed: ${PLUGIN_DEST} → ${REPO}"
+    else
+      rm "${PLUGIN_DEST}"
+      link "$REPO" "$PLUGIN_DEST"
+    fi
+  else
+    echo "error: ${PLUGIN_DEST} exists and is not a symlink. Remove it and re-run." >&2
+    exit 1
+  fi
+else
+  link "$REPO" "$PLUGIN_DEST"
+fi
+
+echo "Cursor skill (slash / discovery):"
 link "$REPO" "$CURSOR_SKILLS/salesagent-code-review-konstantin"
 
-# Claude Code (optional — keep for dual tooling; Cursor does not require it)
-if [ "${SKIP_CLAUDE_INSTALL:-0}" != "1" ]; then
+# Claude Code — opt-in only (Cursor does not need it)
+if [ "${INSTALL_CLAUDE:-0}" = "1" ]; then
+  CLAUDE="${HOME}/.claude"
   mkdir -p "$CLAUDE/agents" "$CLAUDE/skills"
-  echo "claude agents:"
+  echo "claude agents (opt-in):"
   for f in "$REPO"/claude/agents/*.md; do link "$f" "$CLAUDE/agents/$(basename "$f")"; done
-  echo "claude skills:"
+  echo "claude skills (opt-in):"
   for d in "$REPO"/claude/skills/*/; do link "${d%/}" "$CLAUDE/skills/$(basename "$d")"; done
 else
-  echo "claude install skipped (SKIP_CLAUDE_INSTALL=1)"
+  echo "claude install skipped (default). Opt-in: INSTALL_CLAUDE=1 ./install.sh"
 fi
 
 echo
-# Artifact + legacy WT config
 CFG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/pr-review-queue"
 mkdir -p "$CFG_DIR"
 REVIEWS_HOME="${HOME}/.cursor/reviews"
@@ -53,18 +93,18 @@ cat > "$CFG_DIR/config" <<EOF
 # Legacy sibling base (only if PR_REVIEW_USE_LEGACY_WT_BASE=1):
 : "\${PR_REVIEW_WT_BASE:=${WT_BASE_DEFAULT}}"
 EOF
+echo "agents  -> ${agent_count} under agents/ (Task subagent_type)"
 echo "review  -> ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md (archive -> reviews/done/)"
 echo "scratch -> ${QUEUE_HOME}/<owner>-<repo>/queue/<stamp>/"
 echo "post    -> blocked by default (PR_REVIEW_DRAFT_ONLY=1); opt-in: PR_REVIEW_ALLOW_POST=1"
-echo "PR lanes: <salesagent>/.git/.worktrees/pr-<N> (legacy WT_BASE=${WT_BASE_DEFAULT} if enabled)"
+echo "PR lanes: <salesagent>/.git/.worktrees/pr-<N>"
 
 echo
 case ":${PATH}:" in
   *":${BIN}:"*) : ;;
-  *) echo "WARNING: ${BIN} is not on your PATH — add it so 'pr-review-queue' resolves (Cursor skill uses absolute \$REPO_ROOT/bin paths anyway)." ;;
+  *) echo "WARNING: ${BIN} is not on PATH — Cursor skill uses absolute \$REPO_ROOT/bin anyway." ;;
 esac
 
-# Reminder: fork-only push
 if git -C "$REPO" remote get-url origin >/dev/null 2>&1; then
   origin_url="$(git -C "$REPO" remote get-url origin)"
   case "$origin_url" in
@@ -73,13 +113,10 @@ if git -C "$REPO" remote get-url origin >/dev/null 2>&1; then
       ;;
     *)
       echo "WARNING: origin is not the mkostromin-sigma fork: $origin_url" >&2
-      echo "         Push only to mkostromin-sigma/salesagent-code-review-konstantin." >&2
       ;;
   esac
 fi
 if git -C "$REPO" remote get-url upstream >/dev/null 2>&1; then
   echo "note: upstream remote exists — keep it fetch-only; never push upstream."
 fi
-
-echo "installed."
-echo "Reload Cursor (skills) so /salesagent-code-review-konstantin appears."
+echo "installed. Reload Cursor so /salesagent-code-review-konstantin + agent types appear."
