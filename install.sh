@@ -102,7 +102,7 @@ echo "PR lanes: <salesagent>/.git/.worktrees/pr-<N>"
 echo
 case ":${PATH}:" in
   *":${BIN}:"*) : ;;
-  *) echo "WARNING: ${BIN} is not on PATH — Cursor skill uses absolute \$REPO_ROOT/bin anyway." ;;
+  *) echo "WARNING: ${BIN} is not on PATH — add it so \`pr-review-queue\` resolves (skill prefers PATH, not abs bin paths)." ;;
 esac
 
 if git -C "$REPO" remote get-url origin >/dev/null 2>&1; then

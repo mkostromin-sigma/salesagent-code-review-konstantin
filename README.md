@@ -38,7 +38,8 @@ The eight agents: `review-dry`, `review-testing`, `review-python-practices`,
 INSTALL_CLAUDE=1 ./install.sh  # also symlink ~/.claude/ agents+skill
 ```
 
-Reload Cursor after install. Editing files here updates the live install (symlinks).
+Ensure `~/.local/bin` is on your `PATH` so `pr-review-queue` resolves (the Cursor skill
+calls the bare command after install — not a hardcoded checkout path).
 
 ## Use
 

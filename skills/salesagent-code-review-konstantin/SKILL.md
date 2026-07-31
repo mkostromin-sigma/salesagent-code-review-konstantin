@@ -38,31 +38,41 @@ If args are only **`help`** / **`?`**: Russian cheat-sheet; **stop**.
 /salesagent-code-review-konstantin wt [--base REF] [path...]
 
 8 agents + synthesis — Task(subagent_type=review-*) + Auto inherit (never pin models)
-Layer 1: $REPO/bin/pr-review-queue manifest <N> | manifest wt
+Layer 1: pr-review-queue manifest <N> | manifest wt   (on PATH after ./install.sh)
 Review (canonical): ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md
                  or ~/.cursor/reviews/wt-salesagent-code-review-konstantin.md
 Archive when done:  mv → ~/.cursor/reviews/done/  (never rm; same as chris/nicolas)
 Queue scratch only: ~/.cursor/reviews/.konstantin-queue/…/queue/<stamp>/
 GitHub post: NEVER unless explicit opt-in this turn (draft-only default; SDLC never posts)
-Checkout: Documents/code/sigma/salesagent-code-review-konstantin
 ```
 
 ## Resolve REPO_ROOT / HARNESS_ROOT
 
 Prefer the first path that contains `bin/pr-review-queue` and `agents/review-dry.md`:
 
-1. `/Users/maksim.kostromin/Documents/code/sigma/salesagent-code-review-konstantin`
-2. Symlink target of `~/.cursor/plugins/local/salesagent-code-review-konstantin` or `~/.cursor/skills/salesagent-code-review-konstantin`
+1. Symlink target of `~/.cursor/plugins/local/salesagent-code-review-konstantin`
+2. Symlink target of `~/.cursor/skills/salesagent-code-review-konstantin`
 3. Otherwise Glob for `agents/review-dry.md` next to `bin/pr-review-queue`
 
 Verify:
 
-- `$REPO_ROOT/bin/pr-review-queue`
 - `$REPO_ROOT/agents/review-dry.md`
 - `$REPO_ROOT/claude/skills/pr-review-queue/references/review-policy.md`
 - `$REPO_ROOT/claude/skills/pr-review-queue/references/synthesis.md`
 
-If missing, stop and tell the user to clone the fork and run `./install.sh`.
+### Driver command (PATH — not abs `$REPO_ROOT/bin`)
+
+After `./install.sh`, `pr-review-queue` is on `PATH` via `~/.local/bin`. **Prefer the bare command:**
+
+```bash
+pr-review-queue manifest <N>
+pr-review-queue manifest wt [--base REF] [-- path...]
+pr-review-queue artifact --open   # optional standalone HTML
+```
+
+Only if `command -v pr-review-queue` fails: `"$REPO_ROOT/bin/pr-review-queue" …` as fallback, then tell the user to re-run `./install.sh` / fix `PATH`.
+
+If missing agents/policy files, stop and tell the user to clone the fork and run `./install.sh`.
 
 ## Hard gates
 
@@ -125,7 +135,7 @@ From the **salesagent** tree (or `$WT_PATH`):
 ```bash
 # Optional — only if Dev lane is NOT at …/.git/.worktrees/pr-<N>:
 # export PR_REVIEW_CHECKOUT="$WT_PATH"
-"$REPO_ROOT/bin/pr-review-queue" manifest <N>
+pr-review-queue manifest <N>
 ```
 
 Checkout resolution (PR mode) — **no env required** in the common case:
@@ -139,7 +149,7 @@ Checkout resolution (PR mode) — **no env required** in the common case:
 
 ```bash
 # optional: export PR_REVIEW_BASE=upstream/main
-"$REPO_ROOT/bin/pr-review-queue" manifest wt [--base REF] [-- path...]
+pr-review-queue manifest wt [--base REF] [-- path...]
 ```
 
 Parse the printed/saved `manifest.json`. Capture absolute paths: `diff`, `changed_files`, `checkout`, `prior_comments`, `review_dir`. In wt mode `pr` is `null`, `mode` is `working-tree`, and `checkout` is the live salesagent ROOT (dirty tree — not a disposable sibling worktree).
@@ -218,7 +228,7 @@ File contents (English):
 - Validation line: `subagent_model: inherit (session/Auto)`
 - Optional: absolute path to the queue run dir for deep dive.
 
-Optional (standalone, not SDLC): `"$REPO_ROOT/bin/pr-review-queue" artifact --open` for HTML. Do **not** require HTML for SDLC. **`post` is PR-only and draft-blocked by default** — refuse for wt mode; refuse real post without explicit user opt-in.
+Optional (standalone, not SDLC): `pr-review-queue artifact --open` for HTML. Do **not** require HTML for SDLC. **`post` is PR-only and draft-blocked by default** — refuse for wt mode; refuse real post without explicit user opt-in.
 
 ### 5. Present in chat
 
