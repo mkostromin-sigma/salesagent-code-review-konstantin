@@ -21,6 +21,10 @@
 #                        three-dot diff will shift once the author rebases, so
 #                        reviewing them now wastes a pass. Override with
 #                        PR_REVIEW_INCLUDE_CONFLICTING=1.
+#   manifest wt [--base REF] [--] [path...]
+#                        Working-tree mode (no PR). Diff = merge-base(REF,HEAD)..working
+#                        tree (committed + staged + unstaged). checkout = this repo ROOT
+#                        (live dirty tree). Optional pathspecs limit the diff. Cannot post.
 #   post <PR> [--preview] [--dir D]
 #                        Post the approved review for a PR (Layer 3): body +
 #                        inline comments if REVIEW-INLINE.json has anchors, else a
@@ -211,6 +215,131 @@ prepare_pr() {
       draft:($dir+"/DRAFT-COMMENT.md")}'
 }
 
+# ── working-tree setup (no PR) ────────────────────────────────────────────────
+# Review the live dirty tree against merge-base with a base ref (default: try
+# upstream/main, origin/main, main, master). Same manifest shape as prepare_pr so
+# Layer 2 agents need no special case beyond empty prior-comments + mode flag.
+# checkout is ROOT itself — agents must see uncommitted edits; do NOT snapshot to
+# a sibling worktree (that would drop the dirty state).
+resolve_wt_base_ref() {
+  local explicit="${1:-}"
+  if [ -n "$explicit" ]; then
+    git -C "$ROOT" rev-parse --verify -q "$explicit^{commit}" >/dev/null \
+      || die "wt: base ref '${explicit}' not found"
+    printf '%s\n' "$explicit"
+    return 0
+  fi
+  local cand
+  for cand in upstream/main origin/main main master; do
+    if git -C "$ROOT" rev-parse --verify -q "${cand}^{commit}" >/dev/null; then
+      printf '%s\n' "$cand"
+      return 0
+    fi
+  done
+  die "wt: cannot resolve a base ref (pass --base REF, or fetch main)"
+}
+
+prepare_wt() {
+  local run_dir="$1"; shift
+  local base_ref="$1"; shift
+  local -a paths=("$@")
+
+  local dir="${run_dir}/wt"
+  mkdir -p "$dir"
+
+  local merge_base head_sha
+  merge_base="$(git -C "$ROOT" merge-base HEAD "$base_ref")" \
+    || die "wt: merge-base with '${base_ref}' failed"
+  head_sha="$(git -C "$ROOT" rev-parse HEAD)"
+
+  # git diff <commit> = commit vs working tree (includes branch commits + dirty).
+  if [ "${#paths[@]}" -gt 0 ]; then
+    git -C "$ROOT" diff "$merge_base" -- "${paths[@]}" > "${dir}/pr.diff" \
+      || die "wt: git diff failed"
+    git -C "$ROOT" diff --name-only "$merge_base" -- "${paths[@]}" > "${dir}/changed-files.txt" || true
+  else
+    git -C "$ROOT" diff "$merge_base" > "${dir}/pr.diff" || die "wt: git diff failed"
+    git -C "$ROOT" diff --name-only "$merge_base" > "${dir}/changed-files.txt" || true
+  fi
+
+  if [ ! -s "${dir}/pr.diff" ]; then
+    die "wt: empty diff against merge-base with ${base_ref} (nothing to review)"
+  fi
+
+  {
+    echo "# Prior human review history — working-tree mode"
+    echo
+    echo "No PR was specified. There is no GitHub review history for this surface."
+    echo "Base ref: \`${base_ref}\` (merge-base ${merge_base:0:9})."
+    echo "HEAD: ${head_sha:0:9} + working-tree dirty state at checkout \`${ROOT}\`."
+    if [ "${#paths[@]}" -gt 0 ]; then
+      echo "Path filter: ${paths[*]}"
+    fi
+  } > "${dir}/prior-comments.md"
+
+  local title="working tree vs ${base_ref}"
+  local path_note=""
+  [ "${#paths[@]}" -gt 0 ] && path_note=" (paths: ${paths[*]})"
+  log "wt — ${title}${path_note}"
+
+  jq -n \
+    --arg title "$title" --arg base "$base_ref" --arg head "${head_sha}+dirty" \
+    --arg dir "$dir" --arg checkout "$ROOT" --arg mb "$merge_base" \
+    '{pr:null, mode:"working-tree", title:$title, url:"", base:$base, head:$head,
+      merge_base:$mb,
+      review_dir:$dir, checkout:$checkout,
+      diff:($dir+"/pr.diff"), changed_files:($dir+"/changed-files.txt"),
+      prior_comments:($dir+"/prior-comments.md"),
+      draft:($dir+"/DRAFT-COMMENT.md")}'
+}
+
+cmd_manifest_wt() {
+  local base_ref=""
+  local -a paths=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --base)
+        [ $# -ge 2 ] || die "wt: --base requires a ref"
+        base_ref="$2"; shift 2
+        ;;
+      --)
+        shift
+        paths+=("$@")
+        break
+        ;;
+      -*)
+        die "wt: unknown flag '$1' (supported: --base REF, -- path...)"
+        ;;
+      *)
+        paths+=("$1"); shift
+        ;;
+    esac
+  done
+
+  base_ref="$(resolve_wt_base_ref "$base_ref")"
+  # Ensure we can resolve the base tip for merge-base (fetch quietly if remote-ish).
+  case "$base_ref" in
+    upstream/*|origin/*)
+      local rmt="${base_ref%%/*}" br="${base_ref#*/}"
+      git -C "$ROOT" fetch -q "$rmt" "$br" 2>/dev/null || true
+      ;;
+  esac
+
+  local stamp run_dir
+  stamp="$(date +%d%m%y_%H%M)"
+  run_dir="${BASE_DIR}/queue/${stamp}"
+  mkdir -p "$run_dir"
+
+  local entry
+  entry="$(prepare_wt "$run_dir" "$base_ref" "${paths[@]+"${paths[@]}"}")" \
+    || die "wt: preparation failed"
+  local entries
+  entries="$(jq -c --argjson e "$entry" '. += [$e]' <<<'[]')"
+  jq -n --arg run "$run_dir" --argjson prs "$entries" '{run_dir:$run, mode:"working-tree", prs:$prs}' \
+    | tee "${run_dir}/manifest.json"
+  log "manifest (wt) -> ${run_dir}/manifest.json"
+}
+
 cmd_manifest() {
   local -a prs=("$@")
   if [ "${#prs[@]}" -eq 0 ]; then
@@ -252,7 +381,9 @@ cmd_manifest() {
 # in the diff is dropped with a warning (GitHub would 422 the whole review otherwise).
 # `--preview` prints exactly what would be posted without posting.
 cmd_post() {
-  local pr="$1"; shift || true
+  local pr="${1:-}"; shift || true
+  [ -n "$pr" ] || die "post: PR number required"
+  [ "$pr" = "wt" ] && die "post: working-tree reviews cannot be posted to GitHub (no PR)"
   local dir="" preview=0
   while [ $# -gt 0 ]; do case "$1" in
     --dir) dir="$2"; shift 2;;
@@ -377,15 +508,28 @@ cmd_clean() {
   log "pruned stale worktree bookkeeping; your ${WT_PREFIX}<NNNN> worktrees left intact"
 }
 
+cmd_manifest_dispatch() {
+  # manifest wt | working-tree | --wt  → working-tree mode; else PR list / radar.
+  case "${1:-}" in
+    wt|working-tree|--wt)
+      shift || true
+      cmd_manifest_wt "$@"
+      ;;
+    *)
+      cmd_manifest "$@"
+      ;;
+  esac
+}
+
 main() {
   local sub="${1:-}"; shift || true
   case "$sub" in
-    manifest) cmd_manifest "$@";;
+    manifest) cmd_manifest_dispatch "$@";;
     post)     cmd_post "$@";;
     hydrate)  cmd_hydrate "$@";;
     artifact) cmd_artifact "$@";;
     clean)    cmd_clean "$@";;
-    *) die "usage: pr-review-queue {manifest [PR...] | post <PR> [--preview] [--dir D] | hydrate <PR> | artifact [DIR] [--open] | clean}";;
+    *) die "usage: pr-review-queue {manifest [PR...] | manifest wt [--base REF] [-- path...] | post <PR> [--preview] [--dir D] | hydrate <PR> | artifact [DIR] [--open] | clean}";;
   esac
 }
 main "$@"

@@ -47,8 +47,10 @@ From inside the target GitHub repo (the driver derives `owner/repo` from the rem
 
 ```bash
 pr-review-queue manifest [PR...]     # empty -> pulls candidates from pr-radar; skips CONFLICTING
-# then, in Claude Code:
-/pr-review-queue [PR...]             # runs all three layers; draft-only, posts nothing unprompted
+pr-review-queue manifest wt [--base REF] [-- path...]   # working-tree mode (no PR; cannot post)
+# then, in Claude Code or Cursor:
+/pr-review-queue [PR...]             # Claude Code — runs all three layers; draft-only
+/salesagent-code-review-konstantin [PR|wt|]   # Cursor skill
 pr-review-queue artifact --open      # build + open the local review HTML for the newest run
 pr-review-queue post <PR> --preview  # show the exact GitHub-review payload (body + inline)
 pr-review-queue post <PR>            # post one review: body comment + inline comments on diff lines

@@ -23,6 +23,15 @@ PR_REVIEW_INSTALL_NONINTERACTIVE=1 ./install.sh
 
 Slash command: **`/salesagent-code-review-konstantin`** (see root [`SKILL.md`](SKILL.md)).
 
+Targets:
+
+```bash
+# From a salesagent checkout:
+pr-review-queue manifest 1699              # PR mode
+pr-review-queue manifest wt                # working tree vs merge-base(main)
+pr-review-queue manifest wt --base upstream/main -- src/core/
+```
+
 ## salesagent-sdlc Phase 3
 
 SDLC launches this skill as **Reviewer C** in parallel with:
@@ -35,9 +44,10 @@ SDLC launches this skill as **Reviewer C** in parallel with:
 
 Handoff artifact (Phase 4 consumes):
 
-`~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md`
+- PR: `~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md`
+- Working-tree (standalone / pre-PR): `~/.cursor/reviews/wt-salesagent-code-review-konstantin.md`
 
-SDLC never posts Konstantin drafts to GitHub.
+SDLC Phase 3 always uses **PR mode** (leaf PR from Phase 2). Working-tree mode is for standalone `/salesagent-code-review-konstantin` (empty/`wt`/paths) before a PR exists.
 
 ## Git remotes (HARD)
 

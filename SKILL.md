@@ -24,14 +24,17 @@ If args are only **`help`** / **`?`**: Russian cheat-sheet; **stop**.
 
 ```text
 /salesagent-code-review-konstantin help
-/salesagent-code-review-konstantin <PR>     → review one PR (preferred / SDLC)
+/salesagent-code-review-konstantin <PR>                 → review one PR (preferred / SDLC)
+/salesagent-code-review-konstantin                      → working tree vs merge-base(main)
+/salesagent-code-review-konstantin wt [--base REF] [path...]
 
 8 agents (dry, testing, python-practices, consistency, layering,
   adcp-grounding, ratchet-allowlists, bdd-grounding) + synthesis
-Layer 1: $REPO/bin/pr-review-queue manifest
+Layer 1: $REPO/bin/pr-review-queue manifest <N> | manifest wt
 Artifacts: run dir under ~/.local/state/pr-review-queue/…
-Handoff:   ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md
-GitHub post: opt-in only (pr-review-queue post)
+Handoff PR: ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md
+Handoff wt: ~/.cursor/reviews/wt-salesagent-code-review-konstantin.md
+GitHub post: opt-in only (PR mode); wt mode cannot post
 Checkout: Documents/code/sigma/salesagent-code-review-konstantin
 ```
 
@@ -62,11 +65,18 @@ If missing, stop and tell the user to clone the fork and run `./install.sh`.
 
 ## Target
 
-- **Required for a real review:** a PR number (or PR URL). Derive `N` from the user / SDLC brief.
-- **Salesagent workspace:** cwd for `pr-review-queue` must be a **salesagent** checkout (not this harness repo). Prefer the Phase 2 `WT_PATH` if provided; else the open workspace root if it looks like salesagent (`AGENTS.md` / `CLAUDE.md` + `src/`).
-- Set `PR_REVIEW_REPO=prebid/salesagent` when the cwd remote is a fork (so manifests target upstream PRs).
+Resolve one surface:
 
-Working-tree / path-only mode **without** a PR is **not** supported by Layer 1 (`manifest` needs a PR). If the user asks for wt-only, stop and explain this limitation; suggest chris/nicolas for wt mode, or open/name a PR.
+| User / SDLC arg | Mode | Layer 1 |
+|---|---|---|
+| PR number or PR URL | **PR** | `pr-review-queue manifest <N>` |
+| empty, `wt`, `working-tree`, or explicit path(s) without a PR | **working-tree** | `pr-review-queue manifest wt [--base REF] [-- path...]` |
+
+- **Salesagent workspace:** cwd for `pr-review-queue` must be a **salesagent** checkout (not this harness repo). Prefer Phase 2 `WT_PATH` if provided; else the open workspace root if it looks like salesagent (`AGENTS.md` / `CLAUDE.md` + `src/`).
+- Set `PR_REVIEW_REPO=prebid/salesagent` when the cwd remote is a fork (so PR manifests target upstream PRs). For **wt** mode this is still used as the state-dir key; `gh` is not required for the diff itself.
+- **Base ref (wt):** default tries `upstream/main`, `origin/main`, `main`, `master`. Override with `--base` or env `PR_REVIEW_BASE`.
+- **Path filter (wt):** optional pathspecs after `wt` (or after `--`) limit the diff — same idea as chris/nicolas path/glob mode.
+- **Empty diff (wt):** Layer 1 fails loud — nothing to review (clean tree vs base).
 
 ## Execute (align with upstream Layer 1–2; Cursor-adapted Layer 3)
 
@@ -84,16 +94,25 @@ Also skim `$REPO_ROOT/claude/skills/pr-review-queue/SKILL.md` for the canonical 
 
 From the **salesagent** tree (or `$WT_PATH`):
 
+**PR mode:**
+
 ```bash
 export PR_REVIEW_REPO="${PR_REVIEW_REPO:-prebid/salesagent}"
-# Prefer install config / env; default base under Documents if unset
 export PR_REVIEW_WT_BASE="${PR_REVIEW_WT_BASE:-$HOME/Documents/code/sigma}"
 "$REPO_ROOT/bin/pr-review-queue" manifest <N>
 ```
 
-Parse the printed/saved `manifest.json` (also under the run dir the driver logs). Capture per-PR absolute paths: `diff`, `changed_files`, `checkout`, `prior_comments`, `review_dir`.
+**Working-tree mode** (empty arg / `wt` / pathspecs):
 
-If `manifest` fails (auth, CONFLICTING, missing `gh`/`jq`), stop with the error — do not fake a review.
+```bash
+export PR_REVIEW_REPO="${PR_REVIEW_REPO:-prebid/salesagent}"
+# optional: export PR_REVIEW_BASE=upstream/main
+"$REPO_ROOT/bin/pr-review-queue" manifest wt [--base REF] [-- path...]
+```
+
+Parse the printed/saved `manifest.json`. Capture absolute paths: `diff`, `changed_files`, `checkout`, `prior_comments`, `review_dir`. In wt mode `pr` is `null`, `mode` is `working-tree`, and `checkout` is the live salesagent ROOT (dirty tree — not a disposable sibling worktree).
+
+If Layer 1 fails (auth, CONFLICTING, empty wt diff, missing `gh`/`jq` for PR mode), stop with the error — do not fake a review.
 
 ### 2. Layer 2 — eight agents (parallel Tasks)
 
@@ -129,11 +148,14 @@ Launch one Task that:
 
 ### 4. Cursor handoff (SDLC / personal artifact policy)
 
-Always also write an agent-handoff file for Phase 4 consumers:
+Always also write an agent-handoff file for Phase 4 / local consumers:
 
-`~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md`
+| Mode | Path |
+|---|---|
+| PR | `~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md` |
+| working-tree | `~/.cursor/reviews/wt-salesagent-code-review-konstantin.md` |
 
-Create `~/.cursor/reviews/` if missing. On re-review of the same PR, overwrite this path (one current actionable file) unless the user asks to keep history.
+Create `~/.cursor/reviews/` if missing. On re-review of the same surface, overwrite this path unless the user asks to keep history.
 
 File contents (English):
 
@@ -142,7 +164,7 @@ File contents (English):
 - Pointers to absolute paths: `FINDINGS.md`, `DRAFT-COMMENT.md`, run dir.
 - If the synthesized finding list is empty: **do not** write the handoff file; say clean in chat only.
 
-Optional (standalone, not SDLC): `"$REPO_ROOT/bin/pr-review-queue" artifact --open` for the HTML page. Do **not** require HTML for SDLC completion.
+Optional (standalone, not SDLC): `"$REPO_ROOT/bin/pr-review-queue" artifact --open` for the HTML page. Do **not** require HTML for SDLC completion. **`post` is PR-only** — refuse for wt mode.
 
 ### 5. Present in chat
 

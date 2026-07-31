@@ -65,7 +65,18 @@ def load_meta(run_dir, prs, repo, refresh):
             cache = {}
     changed = False
     for pr in prs:
-        key = str(pr["pr"])
+        key = str(pr.get("pr") if pr.get("pr") is not None else pr.get("mode") or "wt")
+        if pr.get("mode") == "working-tree" or pr.get("pr") is None:
+            if key not in cache:
+                cache[key] = {
+                    "author": None,
+                    "updated": None,
+                    "state": "working-tree",
+                    "title": pr.get("title"),
+                    "url": None,
+                }
+                changed = True
+            continue
         if key not in cache or cache[key].get("author") is None:
             cache[key] = gh_meta(pr["pr"], repo)
             changed = True
@@ -242,15 +253,22 @@ def main():
 
     rows, cards = [], []
     for p in prs:
-        num = p["pr"]
+        num = p.get("pr")
+        is_wt = p.get("mode") == "working-tree" or num is None
+        label = "wt" if is_wt else str(num)
         rd = p["review_dir"]
-        m = meta.get(str(num), {})
+        m = meta.get(str(num) if num is not None else (p.get("mode") or "wt"), {})
+        if is_wt and not m:
+            m = meta.get("working-tree") or meta.get("wt") or {}
         title = m.get("title") or p.get("title") or ""
         author = m.get("author")
-        state = m.get("state")
-        url = m.get("url") or p.get("url") or (f"https://github.com/{repo}/pull/{num}" if repo else "#")
+        state = m.get("state") or ("working-tree" if is_wt else None)
+        url = m.get("url") or p.get("url") or (
+            "#" if is_wt else (f"https://github.com/{repo}/pull/{num}" if repo else "#")
+        )
         author_html = (f'<a href="https://github.com/{html.escape(author)}">{html.escape(author)}</a>'
-                       if author else '<span class="dt">unknown</span>')
+                       if author else '<span class="dt">local</span>' if is_wt
+                       else '<span class="dt">unknown</span>')
 
         draft = read(os.path.join(rd, "DRAFT-COMMENT.md"))
         findings = read(os.path.join(rd, "FINDINGS.md"))
@@ -260,8 +278,9 @@ def main():
             inline_c = []
 
         rows.append(
-            f'<tr><td class="mono"><a class="pr-link" href="{html.escape(url)}">#{num}</a></td>'
-            f'<td><a href="#pr{num}">{html.escape(title)}</a></td>'
+            f'<tr><td class="mono"><a class="pr-link" href="{html.escape(url)}">'
+            f'{"wt" if is_wt else "#"+str(num)}</a></td>'
+            f'<td><a href="#pr{html.escape(label)}">{html.escape(title)}</a></td>'
             f'<td class="mono">{author_html}</td>'
             f'<td class="dt">{fmt_updated(m.get("updated"))}</td>'
             f'<td><span class="chip st-{st_class(state)}">{(state or "open").lower()}</span></td>'
@@ -284,8 +303,9 @@ def main():
                      else '<p class="empty">No postable comment drafted.</p>')
 
         cards.append(
-            f'<section id="pr{num}" class="pr">'
-            f'<div class="pr-head"><span class="pr-num"><a href="{html.escape(url)}">#{num}</a></span>'
+            f'<section id="pr{html.escape(label)}" class="pr">'
+            f'<div class="pr-head"><span class="pr-num"><a href="{html.escape(url)}">'
+            f'{"wt" if is_wt else "#"+str(num)}</a></span>'
             f'<span class="pr-title">{html.escape(title)}</span>'
             f'<div class="pr-meta"><span>author: {author_html}</span>'
             f'<span>updated: {fmt_updated(m.get("updated"))}</span>'

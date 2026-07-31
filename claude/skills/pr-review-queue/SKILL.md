@@ -15,6 +15,10 @@ args: "[PR...]  (empty = pull candidates from pr-radar)"
 Automates the manual loop: pr-radar → checkout → 8 review agents → synthesis →
 deterministic local review artifact → you approve → post.
 
+**Working-tree mode:** `pr-review-queue manifest wt [--base REF] [-- path...]`
+prepares the same Layer-2 inputs from the live dirty tree (no PR, no GitHub post).
+Cursor skill `/salesagent-code-review-konstantin` with empty/`wt`/paths uses this.
+
 Three layers. You run this skill; it drives all three and STOPS for your approval
 before anything reaches GitHub. There is no separate orchestration engine — the skill
 itself fans the agents out (Layer 2), so it works anywhere the agents and `bin/`
