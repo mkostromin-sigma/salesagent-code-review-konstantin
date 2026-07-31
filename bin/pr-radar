@@ -31,6 +31,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -79,6 +81,45 @@ def gh(args: list[str]) -> str:
 def gh_json(args: list[str]):
     out = gh(args).strip()
     return json.loads(out) if out else None
+
+
+def _owner_repo_from_url(url: str) -> str | None:
+    m = re.search(r"github[^:/]*[:/]([^/]+)/([^/.]+)(?:\.git)?$", url.strip())
+    return f"{m.group(1)}/{m.group(2)}" if m else None
+
+
+def resolve_github_repo() -> str:
+    """Prefer upstream (fork workflow), then gh fork-parent, then origin — same as pr-review-queue."""
+    env = os.environ.get("PR_REVIEW_REPO") or os.environ.get("SALESAGENT_GH_REPO")
+    if env:
+        return env
+
+    def remote_url(name: str) -> str | None:
+        res = subprocess.run(
+            ["git", "remote", "get-url", name],
+            capture_output=True,
+            text=True,
+        )
+        return res.stdout.strip() if res.returncode == 0 else None
+
+    upstream = _owner_repo_from_url(remote_url("upstream") or "")
+    if upstream:
+        return upstream
+
+    try:
+        meta = gh_json(["repo", "view", "--json", "nameWithOwner,isFork,parent"]) or {}
+        parent = (meta.get("parent") or {}).get("nameWithOwner")
+        if meta.get("isFork") and parent:
+            return parent
+        if meta.get("nameWithOwner"):
+            return meta["nameWithOwner"]
+    except SystemExit:
+        pass
+
+    origin = _owner_repo_from_url(remote_url("origin") or "")
+    if origin:
+        return origin
+    sys.exit("pr-radar: cannot determine GitHub owner/repo from upstream/gh/origin")
 
 
 def api(path: str):
@@ -244,7 +285,7 @@ def main():
     args = ap.parse_args()
 
     me = args.me or gh_json(["api", "user"])["login"]
-    repo = args.repo or gh_json(["repo", "view", "--json", "nameWithOwner"])["nameWithOwner"]
+    repo = args.repo or resolve_github_repo()
     now = datetime.now(timezone.utc)
     print(dim(f"repo={repo}  me={me}  stale>{args.stale_hours:g}h"))
 
