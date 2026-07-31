@@ -78,8 +78,11 @@ Override with `PR_REVIEW_REPO`, `PR_REVIEW_HOME`, `PR_REVIEW_CHECKOUT` / `WT_PAT
 
 ## Review model
 
-**One fix tier — Should fix. No "nice to have", no "blocking".** The line is scope +
-is-it-a-smell, not importance: every in-scope defect or architectural smell (DRY,
+**Cursor / SDLC LLM:** every Task omits `model` (session **Auto** inherit). Never pin
+Anthropic/GPT/Composer/Grok slugs from this path.
+
+**Severity bar — one fix tier: Should fix.** No "nice to have", no "blocking". The line is
+scope + is-it-a-smell, not importance: every in-scope defect or architectural smell (DRY,
 type-safety, layer/boundary, missing coverage, single-transport grading) is a Should
 fix, diagnosed to its root. Wired BDD across all four transports is the verification
 bar — unit tests are not accepted as proof of functionality. Guard allowlists may only
