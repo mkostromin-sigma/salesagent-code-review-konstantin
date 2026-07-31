@@ -1,30 +1,43 @@
 #!/usr/bin/env bash
 #
-# Symlink this repo's tooling into the live locations so it's picked up by PATH
-# and by Claude Code's global config, in every project — without copying anything
-# into a project tree. Re-run any time (idempotent).
+# Install tooling for Cursor + optional Claude Code.
+# Symlinks into ~/.local/bin, ~/.cursor/skills/, and (optionally) ~/.claude/.
+# Never writes into the salesagent product tree.
+#
+# Push policy: this checkout's origin must be mkostromin-sigma/salesagent-code-review-konstantin.
+# Do not add a push URL for KonstantinMirin/prebid-salesagent-pr-review.
 #
 set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="${HOME}/.local/bin"
+CURSOR_SKILLS="${HOME}/.cursor/skills"
 CLAUDE="${HOME}/.claude"
-mkdir -p "$BIN" "$CLAUDE/agents" "$CLAUDE/skills"
+mkdir -p "$BIN" "$CURSOR_SKILLS"
 
 link() { ln -sfn "$1" "$2"; printf '  %s -> %s\n' "$2" "$1"; }
 
 echo "bin (on PATH):"
 for f in "$REPO"/bin/*; do link "$f" "$BIN/$(basename "$f")"; done
-echo "claude agents:"
-for f in "$REPO"/claude/agents/*.md; do link "$f" "$CLAUDE/agents/$(basename "$f")"; done
-echo "claude skills:"
-for d in "$REPO"/claude/skills/*/; do link "${d%/}" "$CLAUDE/skills/$(basename "$d")"; done
+
+echo "Cursor skill:"
+# Whole-repo symlink so SKILL.md + bin/ + claude/ resolve from one discovery root
+link "$REPO" "$CURSOR_SKILLS/salesagent-code-review-konstantin"
+
+# Claude Code (optional — keep for dual tooling; Cursor does not require it)
+if [ "${SKIP_CLAUDE_INSTALL:-0}" != "1" ]; then
+  mkdir -p "$CLAUDE/agents" "$CLAUDE/skills"
+  echo "claude agents:"
+  for f in "$REPO"/claude/agents/*.md; do link "$f" "$CLAUDE/agents/$(basename "$f")"; done
+  echo "claude skills:"
+  for d in "$REPO"/claude/skills/*/; do link "${d%/}" "$CLAUDE/skills/$(basename "$d")"; done
+else
+  echo "claude install skipped (SKIP_CLAUDE_INSTALL=1)"
+fi
 
 echo
-# Worktree base — where per-PR checkouts live, as siblings of your other clones:
-# <base>/<repo>-pr<NNNN>. It is machine-specific, so configure it here. An explicit
-# PR_REVIEW_WT_BASE in the environment always overrides this at run time.
-WT_BASE_DEFAULT="${PR_REVIEW_WT_BASE:-${HOME}/projects}"
-if [ -t 0 ] && [ -z "${PR_REVIEW_WT_BASE:-}" ]; then
+# Worktree base — non-interactive default for Cursor/SDLC hosts
+WT_BASE_DEFAULT="${PR_REVIEW_WT_BASE:-${HOME}/Documents/code/sigma}"
+if [ -t 0 ] && [ -z "${PR_REVIEW_WT_BASE:-}" ] && [ "${PR_REVIEW_INSTALL_NONINTERACTIVE:-0}" != "1" ]; then
   printf 'Worktree base for per-PR checkouts [%s]: ' "$WT_BASE_DEFAULT"
   read -r ans || true
   [ -n "${ans:-}" ] && WT_BASE_DEFAULT="${ans/#\~/$HOME}"
@@ -42,6 +55,25 @@ echo "worktree base -> ${WT_BASE_DEFAULT}  (config: ${CFG_DIR}/config)"
 echo
 case ":${PATH}:" in
   *":${BIN}:"*) : ;;
-  *) echo "WARNING: ${BIN} is not on your PATH — add it so 'pr-review-queue' resolves." ;;
+  *) echo "WARNING: ${BIN} is not on your PATH — add it so 'pr-review-queue' resolves (Cursor skill uses absolute \$REPO_ROOT/bin paths anyway)." ;;
 esac
+
+# Reminder: fork-only push
+if git -C "$REPO" remote get-url origin >/dev/null 2>&1; then
+  origin_url="$(git -C "$REPO" remote get-url origin)"
+  case "$origin_url" in
+    *mkostromin-sigma/salesagent-code-review-konstantin*)
+      echo "origin OK (fork): $origin_url"
+      ;;
+    *)
+      echo "WARNING: origin is not the mkostromin-sigma fork: $origin_url" >&2
+      echo "         Push only to mkostromin-sigma/salesagent-code-review-konstantin." >&2
+      ;;
+  esac
+fi
+if git -C "$REPO" remote get-url upstream >/dev/null 2>&1; then
+  echo "note: upstream remote exists — keep it fetch-only; never push upstream."
+fi
+
 echo "installed."
+echo "Reload Cursor (skills) so /salesagent-code-review-konstantin appears."

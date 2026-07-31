@@ -90,3 +90,17 @@ Edit those to tune behavior.
 
 [MIT](LICENSE). If you build on or redistribute a derivative, please cite this
 repository as attribution — see [`NOTICE`](NOTICE).
+
+## Cursor / personal fork notes
+
+This checkout is the **mkostromin-sigma** fork
+[`salesagent-code-review-konstantin`](https://github.com/mkostromin-sigma/salesagent-code-review-konstantin).
+
+For Cursor + `salesagent-sdlc` Phase 3 (Reviewer C), see [`CURSOR.md`](CURSOR.md) and the root [`SKILL.md`](SKILL.md).
+
+```bash
+PR_REVIEW_INSTALL_NONINTERACTIVE=1 ./install.sh
+```
+
+Push only to the fork remote (`origin`). Do not push to the upstream
+`KonstantinMirin/prebid-salesagent-pr-review` repository.
