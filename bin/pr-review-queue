@@ -4,13 +4,14 @@
 # PR-review pipeline. Layer 2 (the 8-agent fan-out + synthesis) is driven by the
 # pr-review-queue skill, which consumes the manifest this script emits.
 #
-# WORKTREES: Checkouts use sibling worktrees <WT_BASE>/<repo>-pr<NNNN> (WT_BASE is
-# configurable — PR_REVIEW_WT_BASE or the install config; defaults to ~/projects)
-# (branch pr-<NNNN>-review). They are DISPOSABLE: each `manifest` run brings the
-# tree to the exact PR head the diff was built from ($fetched) — fast-forward on a
-# lag, hard-reset on a divergence (old HEAD recoverable via reflog). The review
-# agents grep this tree, so worktree ≡ diff scope must hold as one snapshot; Layer 2
-# must NOT re-fetch, or the tree would drift newer than the diff it grades.
+# WORKTREES (PR mode): prefer salesagent-dev lanes under
+#   <REPO>/.git/.worktrees/pr-<N>     (labor lane — reuse when HEAD==tip && clean)
+# fallback review-only lanes:
+#   <REPO>/.git/.worktrees/pr-<N>-1   (then -2, -3, …)
+# Never hard-reset a dirty labor lane (pr-<N>). Review alts may be reset/created
+# detached at the exact PR tip SHA the diff was built from. Override a path with
+# PR_REVIEW_CHECKOUT / WT_PATH. Legacy PR_REVIEW_WT_BASE/<repo>-pr<N> only when
+# PR_REVIEW_USE_LEGACY_WT_BASE=1.
 #
 # Subcommands:
 #   manifest [PR...]     Prepare review inputs and print a JSON manifest to stdout.
@@ -51,15 +52,15 @@ REPO_URL="https://github.com/${REPO}.git"
 REPO_SLUG="${REPO//\//-}"
 # Outputs live under XDG state, keyed by repo — never in the target tree.
 BASE_DIR="${PR_REVIEW_HOME:-${XDG_STATE_HOME:-${HOME}/.local/state}/pr-review-queue}/${REPO_SLUG}"
-# Checkouts live in sibling worktrees named <repo-dir>-pr<NNNN> on branch
-# pr-<NNNN>-review. They are disposable: `manifest` resets each to the PR head the
-# diff was built from so the agents grep the code they actually review.
-# Optional config (written by install.sh) sets PR_REVIEW_WT_BASE when it is not
-# already in the environment; an explicit env var always wins.
+# Optional config (written by install.sh) may set PR_REVIEW_WT_BASE for legacy.
 PR_REVIEW_CFG="${XDG_CONFIG_HOME:-${HOME}/.config}/pr-review-queue/config"
 [ -f "$PR_REVIEW_CFG" ] && . "$PR_REVIEW_CFG"
-WT_BASE="${PR_REVIEW_WT_BASE:-${HOME}/projects}"
+WT_BASE="${PR_REVIEW_WT_BASE:-${HOME}/Documents/code/sigma}"
 WT_PREFIX="$(basename "$ROOT")-pr"
+# Canonical lane root (same as salesagent-dev ensure-pr-worktree.sh):
+# <git-common-dir>/.worktrees  — NOT Git's metadata dir .git/worktrees/
+GIT_COMMON="$(cd "$ROOT" && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null   || (cd "$ROOT" && cd "$(git rev-parse --git-common-dir)" && pwd))"
+LANES_DIR="${SALESAGENT_WORKTREES:-${GIT_COMMON}/.worktrees}"
 
 log() { printf '  %s\n' "$*" >&2; }
 die() { printf 'pr-review-queue: %s\n' "$*" >&2; exit 1; }
@@ -175,34 +176,10 @@ prepare_pr() {
 
   capture_prior_comments "$pr" "${dir}/prior-comments.md"
 
-  # Sibling worktree at ${WT_BASE}/<repo>-pr<NNNN> on branch pr-<NNNN>-review.
-  # Tree context for sibling greps only — scope is the local git diff above.
-  local checkout="${WT_BASE}/${WT_PREFIX}${pr}"
-  local branch="pr-${pr}-review"
-  if git -C "$ROOT" worktree list --porcelain | grep -qx "worktree ${checkout}"; then
-    # The review agents grep this LOCAL tree, so it must match the exact SHA the
-    # diff above was built from ($fetched) — worktree ≡ diff scope, one snapshot.
-    # These worktrees are disposable: bring the tree to the PR head. A plain lag
-    # fast-forwards; a divergence (local fix commits) hard-resets onto the head,
-    # with the old SHA logged so `git reflog` can recover it.
-    local wt_head; wt_head="$(git -C "$checkout" rev-parse HEAD)"
-    if [ "$wt_head" != "$fetched" ]; then
-      if ! git -C "$ROOT" merge-base --is-ancestor "$wt_head" "$fetched" 2>/dev/null; then
-        log "note: ${checkout} (HEAD ${wt_head:0:9}) diverges from PR head ${fetched:0:9}; hard-reset onto it (old HEAD recoverable via reflog)"
-      fi
-      git -C "$checkout" reset -q --hard "$fetched" || die "PR #${pr}: failed to reset ${checkout} to PR head ${fetched:0:9}"
-      log "worktree ${checkout} -> PR head ${fetched:0:9}"
-    fi
-  elif [ -e "$checkout" ]; then
-    die "PR #${pr}: ${checkout} exists but is not a git worktree; refusing to clobber"
-  else
-    # None yet — create it their way (branch pr-<NNNN>-review at the PR head).
-    if git -C "$ROOT" show-ref -q --verify "refs/heads/${branch}"; then
-      git -C "$ROOT" worktree add -q "$checkout" "$branch"
-    else
-      git -C "$ROOT" worktree add -q -b "$branch" "$checkout" "$fetched"
-    fi
-  fi
+  # Resolve checkout under .git/.worktrees (reuse Dev lane when safe).
+  local checkout
+  checkout="$(resolve_pr_checkout "$pr" "$fetched")" \
+    || die "PR #${pr}: could not resolve a review checkout under ${LANES_DIR}"
 
   jq -n \
     --arg pr "$pr" --arg title "$title" --arg url "$url" \
@@ -213,6 +190,134 @@ prepare_pr() {
       diff:($dir+"/pr.diff"), changed_files:($dir+"/changed-files.txt"),
       prior_comments:($dir+"/prior-comments.md"),
       draft:($dir+"/DRAFT-COMMENT.md")}'
+}
+
+# ── PR checkout resolution (.git/.worktrees) ──────────────────────────────────
+# Prefer …/.git/.worktrees/pr-<N> (salesagent-dev labor lane) when HEAD matches
+# the fetched tip and the tree is clean. Never hard-reset a dirty labor lane.
+# Else use/create …/.git/.worktrees/pr-<N>-1, pr-<N>-2, … (detached at tip).
+# Env override: PR_REVIEW_CHECKOUT or WT_PATH (must be a worktree of this repo).
+# Legacy: PR_REVIEW_USE_LEGACY_WT_BASE=1 → ${WT_BASE}/${WT_PREFIX}${pr}.
+_is_repo_worktree() {
+  local path="$1"
+  [ -d "$path" ] || return 1
+  git -C "$path" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
+  local common
+  common="$(cd "$path" && git rev-parse --path-format=absolute --git-common-dir 2>/dev/null \
+    || (cd "$path" && cd "$(git rev-parse --git-common-dir)" && pwd))"
+  [ "$common" = "$GIT_COMMON" ]
+}
+
+_worktree_registered() {
+  local path="$1"
+  git -C "$ROOT" worktree list --porcelain | grep -qx "worktree ${path}"
+}
+
+_tree_clean() {
+  local path="$1"
+  # porcelain empty ⇒ clean (no staged/unstaged/untracked noise we care about for ≡ tip)
+  [ -z "$(git -C "$path" status --porcelain 2>/dev/null)" ]
+}
+
+# Try to use an existing path at exact tip. allow_reset=1 ⇒ hard-reset if clean+wrong SHA.
+# Returns 0 and prints path on success.
+_try_use_checkout() {
+  local path="$1" tip="$2" allow_reset="${3:-0}" label="$4"
+  if ! _is_repo_worktree "$path"; then
+    if [ -e "$path" ]; then
+      log "note: ${path} exists but is not a worktree of this repo — skipping"
+      return 1
+    fi
+    return 1
+  fi
+  if ! _worktree_registered "$path"; then
+    log "note: ${path} looks like a git dir but is not registered — skipping"
+    return 1
+  fi
+  local wt_head
+  wt_head="$(git -C "$path" rev-parse HEAD)"
+  if [ "$wt_head" = "$tip" ]; then
+    if _tree_clean "$path"; then
+      log "checkout ${label}: reuse ${path} @ ${tip:0:9} (clean)"
+      printf '%s\n' "$path"
+      return 0
+    fi
+    log "note: ${path} is @ tip but dirty — skipping (worktree must ≡ diff snapshot)"
+    return 1
+  fi
+  if [ "$allow_reset" = "1" ] && _tree_clean "$path"; then
+    log "note: ${path} (HEAD ${wt_head:0:9}) ≠ tip ${tip:0:9}; hard-reset (clean review lane)"
+    git -C "$path" reset -q --hard "$tip" \
+      || { log "note: reset failed for ${path}"; return 1; }
+    log "checkout ${label}: ${path} -> ${tip:0:9}"
+    printf '%s\n' "$path"
+    return 0
+  fi
+  if [ "$allow_reset" != "1" ]; then
+    log "note: labor lane ${path} at ${wt_head:0:9} != tip ${tip:0:9} — will not reset; trying alt"
+  fi
+  return 1
+}
+
+_create_detached_checkout() {
+  local path="$1" tip="$2" label="$3"
+  if [ -e "$path" ]; then
+    log "note: ${path} exists; refusing to clobber"
+    return 1
+  fi
+  mkdir -p "$(dirname "$path")"
+  git -C "$ROOT" worktree add -q --detach "$path" "$tip" \
+    || { log "note: worktree add failed for ${path}"; return 1; }
+  log "checkout ${label}: created ${path} @ ${tip:0:9} (detached)"
+  printf '%s\n' "$path"
+}
+
+resolve_pr_checkout() {
+  local pr="$1" tip="$2"
+  local override="${PR_REVIEW_CHECKOUT:-${WT_PATH:-}}"
+  local path out
+
+  if [ -n "$override" ]; then
+    path="$(cd "$override" 2>/dev/null && pwd)" || die "PR #${pr}: PR_REVIEW_CHECKOUT/WT_PATH not a directory: ${override}"
+    out="$(_try_use_checkout "$path" "$tip" 0 "override")" && { printf '%s\n' "$out"; return 0; }
+    # Override wrong SHA but clean → allow reset only if not the primary labor path name
+    if [[ "$(basename "$path")" == "pr-${pr}" ]]; then
+      die "PR #${pr}: override ${path} is the labor lane but not at tip ${tip:0:9} (or dirty) — fix Dev lane or unset WT_PATH"
+    fi
+    out="$(_try_use_checkout "$path" "$tip" 1 "override")" && { printf '%s\n' "$out"; return 0; }
+    die "PR #${pr}: override checkout unusable: ${path}"
+  fi
+
+  if [ "${PR_REVIEW_USE_LEGACY_WT_BASE:-0}" = "1" ]; then
+    path="${WT_BASE}/${WT_PREFIX}${pr}"
+    if out="$(_try_use_checkout "$path" "$tip" 1 "legacy")"; then
+      printf '%s\n' "$out"; return 0
+    fi
+    out="$(_create_detached_checkout "$path" "$tip" "legacy")" && { printf '%s\n' "$out"; return 0; }
+    die "PR #${pr}: legacy checkout failed at ${path}"
+  fi
+
+  mkdir -p "$LANES_DIR"
+
+  # 1) Prefer Dev labor lane pr-<N> — reuse only, never reset if dirty/wrong tip.
+  path="${LANES_DIR}/pr-${pr}"
+  if out="$(_try_use_checkout "$path" "$tip" 0 "labor")"; then
+    printf '%s\n' "$out"; return 0
+  fi
+
+  # 2) Review-only alts: pr-<N>-1, pr-<N>-2, … (reset allowed when clean; else create).
+  local i
+  for i in 1 2 3 4 5 6 7 8 9; do
+    path="${LANES_DIR}/pr-${pr}-${i}"
+    if out="$(_try_use_checkout "$path" "$tip" 1 "alt-${i}")"; then
+      printf '%s\n' "$out"; return 0
+    fi
+    if [ ! -e "$path" ]; then
+      out="$(_create_detached_checkout "$path" "$tip" "alt-${i}")" && { printf '%s\n' "$out"; return 0; }
+    fi
+  done
+
+  return 1
 }
 
 # ── working-tree setup (no PR) ────────────────────────────────────────────────

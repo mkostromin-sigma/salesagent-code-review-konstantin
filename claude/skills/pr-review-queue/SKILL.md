@@ -41,14 +41,12 @@ pr-review-queue manifest $ARGUMENTS
 ```
 
 This prints (and saves) a `manifest.json` with, per PR: the author diff, changed
-files, prior human review comments, and a sibling worktree at
-`<worktree-base>/<repo>-pr<NNNN>` (branch `pr-<NNNN>-review`; the base is set at install,
-default `~/projects`, overridable with `PR_REVIEW_WT_BASE`). The review agents grep that
-worktree, so the driver brings it to the **exact PR head the diff was built from** on
-every run — fast-forward on a lag, hard-reset on a divergence (the old HEAD stays
-recoverable via `git reflog`). These worktrees are disposable: worktree ≡ diff scope is
-one snapshot. Layer 2 must NOT re-fetch or reset — that would drift the tree newer than
-the diff the agents are grading.
+files, prior human review comments, and a checkout under
+`<salesagent>/.git/.worktrees/pr-<N>` (Dev labor lane when clean + at tip) or
+`pr-<N>-1` / `pr-<N>-2` / … (review-only). The review agents grep that
+checkout, so it must be the **exact PR head the diff was built from**.
+Pass `PR_REVIEW_CHECKOUT` / `WT_PATH` to force a path. Layer 2 must NOT
+re-fetch or reset the labor lane — that would drift the tree or wipe dirty work.
 
 ## 2. Review fan-out + synthesis (Layer 2)
 

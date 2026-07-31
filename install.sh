@@ -35,22 +35,18 @@ else
 fi
 
 echo
-# Worktree base — non-interactive default for Cursor/SDLC hosts
+# Legacy WT_BASE config kept for PR_REVIEW_USE_LEGACY_WT_BASE=1 only.
+# Default PR checkouts now use <salesagent>/.git/.worktrees/pr-<N> (see SKILL.md).
 WT_BASE_DEFAULT="${PR_REVIEW_WT_BASE:-${HOME}/Documents/code/sigma}"
-if [ -t 0 ] && [ -z "${PR_REVIEW_WT_BASE:-}" ] && [ "${PR_REVIEW_INSTALL_NONINTERACTIVE:-0}" != "1" ]; then
-  printf 'Worktree base for per-PR checkouts [%s]: ' "$WT_BASE_DEFAULT"
-  read -r ans || true
-  [ -n "${ans:-}" ] && WT_BASE_DEFAULT="${ans/#\~/$HOME}"
-fi
 CFG_DIR="${XDG_CONFIG_HOME:-${HOME}/.config}/pr-review-queue"
 mkdir -p "$CFG_DIR"
 cat > "$CFG_DIR/config" <<EOF
 # pr-review-queue configuration (written by install.sh; edit freely).
-# Where per-PR worktrees are created: <base>/<repo>-pr<NNNN>. An explicit
-# PR_REVIEW_WT_BASE in your environment overrides this.
+# Default PR checkouts: <repo>/.git/.worktrees/pr-<N> (and pr-<N>-1, …).
+# Legacy sibling base (only if PR_REVIEW_USE_LEGACY_WT_BASE=1):
 : "\${PR_REVIEW_WT_BASE:=${WT_BASE_DEFAULT}}"
 EOF
-echo "worktree base -> ${WT_BASE_DEFAULT}  (config: ${CFG_DIR}/config)"
+echo "PR lanes: <salesagent>/.git/.worktrees/pr-<N> (legacy WT_BASE=${WT_BASE_DEFAULT} if enabled)"
 
 echo
 case ":${PATH}:" in

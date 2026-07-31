@@ -62,15 +62,16 @@ your per-PR approval before posting.
 
 ### Where things go (never in the target repo)
 
-- **Worktrees:** `<worktree-base>/<repo>-pr<NNNN>` — the base is chosen at install
-  (default `~/projects`) and overridable per run with `PR_REVIEW_WT_BASE`. Reset by the
-  driver to the exact PR head the diff was built from (they are disposable; local
-  scratch is not preserved).
+- **Worktrees (PR mode):** `<salesagent>/.git/.worktrees/pr-<N>` (reuse Dev labor
+  lane when clean + at tip), else `pr-<N>-1`, `pr-<N>-2`, … Review agents grep that
+  tree; it must match the PR tip SHA the diff was built from. Pass
+  `PR_REVIEW_CHECKOUT` / `WT_PATH` to force a path. Legacy
+  `$PR_REVIEW_WT_BASE/<repo>-pr<N>` only with `PR_REVIEW_USE_LEGACY_WT_BASE=1`.
 - **Review outputs:** `~/.local/state/pr-review-queue/<owner>-<repo>/queue/<stamp>/`
   (`FINDINGS.md`, `DRAFT-COMMENT.md`, `REVIEW-INLINE.json`, `review-artifact.html` per run).
 
-Override with `PR_REVIEW_REPO`, `PR_REVIEW_HOME`, `PR_REVIEW_WT_BASE`,
-`PR_REVIEW_INCLUDE_CONFLICTING=1`.
+Override with `PR_REVIEW_REPO`, `PR_REVIEW_HOME`, `PR_REVIEW_CHECKOUT` / `WT_PATH`,
+`SALESAGENT_WORKTREES`, `PR_REVIEW_INCLUDE_CONFLICTING=1`.
 
 ## Review model
 

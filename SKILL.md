@@ -98,9 +98,17 @@ From the **salesagent** tree (or `$WT_PATH`):
 
 ```bash
 export PR_REVIEW_REPO="${PR_REVIEW_REPO:-prebid/salesagent}"
-export PR_REVIEW_WT_BASE="${PR_REVIEW_WT_BASE:-$HOME/Documents/code/sigma}"
+# Prefer Dev lane from Phase 2 (same tip, clean):
+export PR_REVIEW_CHECKOUT="${WT_PATH:-}"   # optional; …/salesagent/.git/.worktrees/pr-<N>
 "$REPO_ROOT/bin/pr-review-queue" manifest <N>
 ```
+
+Checkout resolution (PR mode):
+
+1. `PR_REVIEW_CHECKOUT` / `WT_PATH` if set and usable  
+2. else `…/.git/.worktrees/pr-<N>` when `HEAD==tip` and **clean** (never hard-reset a dirty labor lane)  
+3. else create/reuse `…/.git/.worktrees/pr-<N>-1`, `-2`, … (detached at tip; reset allowed only when clean)  
+4. legacy `PR_REVIEW_WT_BASE/<repo>-pr<N>` only if `PR_REVIEW_USE_LEGACY_WT_BASE=1`
 
 **Working-tree mode** (empty arg / `wt` / pathspecs):
 
