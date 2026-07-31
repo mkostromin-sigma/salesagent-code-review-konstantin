@@ -43,13 +43,15 @@ mkdir -p "$REPORTS_HOME"
 WT_BASE_DEFAULT="${PR_REVIEW_WT_BASE:-${HOME}/Documents/code/sigma}"
 cat > "$CFG_DIR/config" <<EOF
 # pr-review-queue configuration (written by install.sh; edit freely).
-# Run artifacts (FINDINGS / drafts / HTML):
+# Queue scratch only (FINDINGS / drafts / HTML). Canonical review =
+# ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md
 : "\${PR_REVIEW_HOME:=${REPORTS_HOME}}"
 # Default PR checkouts: <repo>/.git/.worktrees/pr-<N> (and pr-<N>-1, …).
 # Legacy sibling base (only if PR_REVIEW_USE_LEGACY_WT_BASE=1):
 : "\${PR_REVIEW_WT_BASE:=${WT_BASE_DEFAULT}}"
 EOF
-echo "artifacts -> ${REPORTS_HOME}/<owner>-<repo>/queue/<stamp>/"
+echo "review  -> ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md (archive -> reviews/done/)"
+echo "scratch -> ${REPORTS_HOME}/<owner>-<repo>/queue/<stamp>/"
 echo "PR lanes: <salesagent>/.git/.worktrees/pr-<N> (legacy WT_BASE=${WT_BASE_DEFAULT} if enabled)"
 
 echo

@@ -23,6 +23,11 @@ Cursor skill `/salesagent-code-review-konstantin` with empty/`wt`/paths uses thi
 every Task (8 agents + synthesis) **omits** `model` (inherit Auto). Never pin
 `claude-opus-*`, `claude-sonnet-*`, or any other provider slug from this path.
 
+**Cursor review file (HARD):** actionable findings go to
+`~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md` (same trio as
+chris/nicolas). After fix+push: `mv` → `~/.cursor/reviews/done/` (never `rm`).
+Queue run dirs under `~/.cursor/reports/…` are scratch only.
+
 Three layers. You run this skill; it drives all three and STOPS for your approval
 before anything reaches GitHub. There is no separate orchestration engine — the skill
 itself fans the agents out (Layer 2), so it works anywhere the agents and `bin/`

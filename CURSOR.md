@@ -51,12 +51,12 @@ SDLC launches this skill as **Reviewer C** in parallel with:
 | B | `salesagent-code-review-nicolas` |
 | C | `salesagent-code-review-konstantin` (this) |
 
-Handoff artifact (Phase 4 consumes):
+**Canonical review** (same trio as chris/nicolas; after fix+push: `mv` → `reviews/done/`, never `rm`):
 
 - PR: `~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md`
 - Working-tree (standalone / pre-PR): `~/.cursor/reviews/wt-salesagent-code-review-konstantin.md`
 
-Full run record (FINDINGS / drafts / HTML):
+Queue scratch only (FINDINGS / drafts / HTML — not what Phase 4 greps):
 
 `~/.cursor/reports/salesagent-code-review-konstantin/<owner>-<repo>/queue/<stamp>/`
 

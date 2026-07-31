@@ -30,9 +30,10 @@ If args are only **`help`** / **`?`**: Russian cheat-sheet; **stop**.
 
 8 agents + synthesis — Task model: inherit Auto ONLY (never pin Anthropic/GPT/…)
 Layer 1: $REPO/bin/pr-review-queue manifest <N> | manifest wt
-Run dir:   ~/.cursor/reports/salesagent-code-review-konstantin/<owner>-<repo>/queue/<stamp>/
-Handoff PR: ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md
-Handoff wt: ~/.cursor/reviews/wt-salesagent-code-review-konstantin.md
+Review (canonical): ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md
+                 or ~/.cursor/reviews/wt-salesagent-code-review-konstantin.md
+Archive when done:  mv → ~/.cursor/reviews/done/  (never rm; same as chris/nicolas)
+Queue scratch only: ~/.cursor/reports/salesagent-code-review-konstantin/…/queue/<stamp>/
 GitHub post: opt-in only (PR mode); wt mode cannot post
 Checkout: Documents/code/sigma/salesagent-code-review-konstantin
 ```
@@ -154,31 +155,44 @@ Launch one Task that:
 3. Does **not** post
 4. **Omit `model` (Auto inherit)** — same HARD gate as the eight reviewers
 
-### 4. Cursor handoff (SDLC / personal artifact policy)
+### 4. Canonical review file (`~/.cursor/reviews/` — HARD)
 
-Always also write an agent-handoff file for Phase 4 / local consumers:
+Same contract as chris / nicolas. **This is the review consumers use** (SDLC Phase 4,
+local fix, archive). Do **not** treat the queue run dir as the review artifact.
 
 | Mode | Path |
 |---|---|
 | PR | `~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md` |
 | working-tree | `~/.cursor/reviews/wt-salesagent-code-review-konstantin.md` |
 
-Create `~/.cursor/reviews/` if missing. On re-review of the same surface, overwrite this path unless the user asks to keep history.
+Trio naming (example PR 1812):
+
+```text
+~/.cursor/reviews/pr-1812-salesagent-code-review-chris.md
+~/.cursor/reviews/pr-1812-salesagent-code-review-nicolas.md
+~/.cursor/reviews/pr-1812-salesagent-code-review-konstantin.md
+```
+
+Rules:
+
+1. Create `~/.cursor/reviews/` (and `done/`) if missing. Never write the review into the git repo.
+2. On re-review of the same target, **overwrite** the same path (one current file per target) unless the user asks to keep history.
+3. Write the file when actionable findings exist; if the synthesized list is empty — **do not** write it; say clean in chat only.
+4. **Archive (HARD):** after all findings from that file are fixed and pushed, `mv` it to `~/.cursor/reviews/done/` — **never `rm`**. Outstanding work = root `reviews/` only; ignore `done/` as open work. (SDLC / Dev / Q1-B share this rule.)
+5. Queue scratch (`FINDINGS.md` / drafts / HTML under `~/.cursor/reports/salesagent-code-review-konstantin/…`) is internal to the 8+1 fan-out — optional pointer in the review file; not archived by this skill; not what Phase 4 greps.
 
 File contents (English):
 
-- Severity-ordered findings. Map Konstantin's single **Should fix** tier → `SHOULD-FIX` in the handoff header (SDLC fix-all treats all severities as mandatory; Notes stay Notes / FOLLOW-UP only when clearly out-of-scope).
+- Severity-ordered findings. Map Konstantin's **Should fix** → `SHOULD-FIX` (SDLC fix-all: all severities mandatory; Notes / FOLLOW-UP only when clearly out-of-scope).
 - Each finding: `file:line`, mechanism, evidence, why tests miss it, fix.
-- Pointers to absolute paths: `FINDINGS.md`, `DRAFT-COMMENT.md`, run dir under
-  `~/.cursor/reports/salesagent-code-review-konstantin/…`
 - Validation line: `subagent_model: inherit (session/Auto)`
-- If the synthesized finding list is empty: **do not** write the handoff file; say clean in chat only.
+- Optional: absolute path to the queue run dir for deep dive.
 
-Optional (standalone, not SDLC): `"$REPO_ROOT/bin/pr-review-queue" artifact --open` for the HTML page. Do **not** require HTML for SDLC completion. **`post` is PR-only** — refuse for wt mode.
+Optional (standalone, not SDLC): `"$REPO_ROOT/bin/pr-review-queue" artifact --open` for HTML. Do **not** require HTML for SDLC. **`post` is PR-only** — refuse for wt mode.
 
 ### 5. Present in chat
 
-Short Russian status for the user/PM: finding counts, handoff path, run dir. Do not dump the full FINDINGS into chat when the handoff file exists.
+Short Russian status: finding counts + **review path under `~/.cursor/reviews/`**. Do not dump full FINDINGS into chat when the review file exists.
 
 ## Not this skill
 

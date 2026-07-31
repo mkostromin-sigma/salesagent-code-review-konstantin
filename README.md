@@ -67,11 +67,10 @@ your per-PR approval before posting.
   tree; it must match the PR tip SHA the diff was built from. Pass
   `PR_REVIEW_CHECKOUT` / `WT_PATH` to force a path. Legacy
   `$PR_REVIEW_WT_BASE/<repo>-pr<N>` only with `PR_REVIEW_USE_LEGACY_WT_BASE=1`.
-- **Review outputs (run dir):** `~/.cursor/reports/salesagent-code-review-konstantin/<owner>-<repo>/queue/<stamp>/`
-  (`FINDINGS.md`, `DRAFT-COMMENT.md`, `REVIEW-INLINE.json`, `review-artifact.html` per run).
-  Override root with `PR_REVIEW_HOME`.
-- **SDLC / actionable handoff:** still `~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md`
-  (Phase 4 consumes the same pattern as chris/nicolas); archive to `reviews/done/` after fix+push.
+- **Canonical review (HARD):** `~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md`
+  (same trio naming as chris/nicolas). When fixed+pushed: `mv` → `~/.cursor/reviews/done/` (never `rm`).
+- **Queue scratch only:** `~/.cursor/reports/salesagent-code-review-konstantin/<owner>-<repo>/queue/<stamp>/`
+  (`FINDINGS.md`, drafts, HTML). Override with `PR_REVIEW_HOME`. Not what Phase 4 greps.
 
 Override with `PR_REVIEW_REPO`, `PR_REVIEW_HOME`, `PR_REVIEW_CHECKOUT` / `WT_PATH`,
 `SALESAGENT_WORKTREES`, `PR_REVIEW_INCLUDE_CONFLICTING=1`.
