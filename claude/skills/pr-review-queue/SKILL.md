@@ -19,17 +19,14 @@ deterministic local review artifact → you approve → post.
 prepares the same Layer-2 inputs from the live dirty tree (no PR, no GitHub post).
 Cursor skill `/salesagent-code-review-konstantin` with empty/`wt`/paths uses this.
 
-**Cursor model policy (HARD):** when this skill is driven from Cursor / `salesagent-sdlc`,
-every Task (8 agents + synthesis) **omits** `model` (inherit Auto). Never pin
-`claude-opus-*`, `claude-sonnet-*`, or any other provider slug from this path.
+**Cursor agents live in `agents/`.** `claude/agents/` are symlinks for optional Claude Code.
 
-**Cursor review file (HARD):** actionable findings go to
-`~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md` (same trio as
-chris/nicolas). After fix+push: `mv` → `~/.cursor/reviews/done/` (never `rm`).
-Queue run dirs under `~/.cursor/reviews/.konstantin-queue/…` are scratch only.
+**Cursor model policy (HARD):** when driven from Cursor / `salesagent-sdlc`, every Task
+**omits** `model` (Auto inherit). Fan-out uses named `subagent_type` (`review-dry`, …).
 
-**Never run tests locally (HARD):** nested agents judge coverage/quality by reading
-code. Do not invoke pytest/tox/`make quality`/test stacks — GitHub Actions CI owns that.
+**Cursor review file (HARD):** `~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md`
+→ archive `reviews/done/`. Scratch: `~/.cursor/reviews/.konstantin-queue/`. Never run tests
+locally; never post without explicit opt-in.
 
 Three layers. You run this skill; it drives all three and STOPS for your approval
 before anything reaches GitHub. There is no separate orchestration engine — the skill
