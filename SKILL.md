@@ -34,7 +34,7 @@ Review (canonical): ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.m
                  or ~/.cursor/reviews/wt-salesagent-code-review-konstantin.md
 Archive when done:  mv → ~/.cursor/reviews/done/  (never rm; same as chris/nicolas)
 Queue scratch only: ~/.cursor/reviews/.konstantin-queue/…/queue/<stamp>/
-GitHub post: opt-in only (PR mode); wt mode cannot post
+GitHub post: NEVER unless explicit opt-in this turn (draft-only default; SDLC never posts)
 Checkout: Documents/code/sigma/salesagent-code-review-konstantin
 ```
 
@@ -58,10 +58,26 @@ If missing, stop and tell the user to clone the fork and run `./install.sh`.
 ## Hard gates
 
 1. **Read-only on product code** unless the user explicitly asks for a fix.
-2. **Never post to GitHub** unless the user clearly opts in this turn (`post to GitHub`, `pr-review-queue post`, etc.). SDLC Phase 3 never opts in.
+2. **Never post to GitHub (HARD — same as SDLC / nicolas).** Chat + local review file only.
+   Drafts (`DRAFT-COMMENT.md`, `REVIEW-INLINE.json`, HTML) stay local.
+   - **Forbidden** unless the user clearly opts in **this same turn** (`post to GitHub`,
+     `comment on the PR`, `publish findings to #N`, `pr-review-queue post` with intent to publish).
+   - **Not** opt-in: naming a PR, “ready for review”, re-review, SDLC Phase 3, writing
+     `~/.cursor/reviews/…`, `artifact --open`, or `post --preview`.
+   - **SDLC Phase 3:** never opts in — do not run `pr-review-queue post` (except `--preview` if useful).
+   - Bin default: `PR_REVIEW_DRAFT_ONLY=1` blocks real posts until `PR_REVIEW_ALLOW_POST=1`.
 3. **Model = Auto only (HARD).** On **every** Task (8 reviewers + synthesis): **omit** the `model` argument so subagents inherit the parent session (Auto). **Forbidden:** pinning `claude-opus-*`, `claude-sonnet-*`, `anthropic`, `gpt-*`, `composer-*`, `grok-*`, or any other slug. Do not “upgrade for quality.” Record in the chat/handoff validation line: `subagent_model: inherit (session/Auto)`.
 4. **One PR per SDLC/Cursor review run** when invoked from `salesagent-sdlc` (pass the leaf PR). Standalone multi-PR queue mode is optional and out of SDLC Phase 3.
 5. Fan-out agents via **Task** (mandatory). Do not invent a serial one-agent shortcut unless Task is unavailable — then say so and run sequentially.
+
+## GitHub post vs local drafts (HARD GATE)
+
+**Chat + `~/.cursor/reviews/…`. Never GitHub unless asked.**
+
+Upstream `pr-review-queue post` can publish body + inline — that path is **opt-in only**.
+Cursor / `salesagent-sdlc` stop after local drafts + the canonical review file. Do not
+create, edit, submit, comment, approve, resolve, label, or otherwise mutate the PR on
+GitHub from this skill unless the user explicitly opted in this turn.
 
 ## Target
 
@@ -152,7 +168,7 @@ Launch one Task that:
 
 1. Reads `synthesis.md` + `review-voice.md` + all `<review_dir>/review-*.md`
 2. Writes `<review_dir>/FINDINGS.md`, `DRAFT-COMMENT.md`, `REVIEW-INLINE.json` per synthesis contract
-3. Does **not** post
+3. Does **not** post (no `pr-review-queue post` without user opt-in + `PR_REVIEW_ALLOW_POST=1`)
 4. **Omit `model` (Auto inherit)** — same HARD gate as the eight reviewers
 
 ### 4. Canonical review file (`~/.cursor/reviews/` — HARD)
@@ -188,7 +204,7 @@ File contents (English):
 - Validation line: `subagent_model: inherit (session/Auto)`
 - Optional: absolute path to the queue run dir for deep dive.
 
-Optional (standalone, not SDLC): `"$REPO_ROOT/bin/pr-review-queue" artifact --open` for HTML. Do **not** require HTML for SDLC. **`post` is PR-only** — refuse for wt mode.
+Optional (standalone, not SDLC): `"$REPO_ROOT/bin/pr-review-queue" artifact --open` for HTML. Do **not** require HTML for SDLC. **`post` is PR-only and draft-blocked by default** — refuse for wt mode; refuse real post without explicit user opt-in.
 
 ### 5. Present in chat
 

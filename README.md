@@ -10,7 +10,8 @@ Eight review agents each grade one dimension of a PR's diff; a synthesis step de
 across them, verifies each finding against the checked-out code, and produces one
 GitHub-ready review (a body comment plus inline comments anchored to changed lines).
 The review is written to disk and rendered as a self-contained local HTML page — it
-posts nothing until you approve it, per PR.
+posts nothing until you **explicitly** approve a publish. **Cursor / `salesagent-sdlc`:**
+never post (local `~/.cursor/reviews/` + drafts only); same policy as chris/nicolas.
 
 Reviews are written in the voice of a senior Python architect: pragmatic, direct, and
 grounded in the mechanism of each defect rather than adjectives.
@@ -52,13 +53,15 @@ pr-review-queue manifest wt [--base REF] [-- path...]   # working-tree mode (no 
 /pr-review-queue [PR...]             # Claude Code — runs all three layers; draft-only
 /salesagent-code-review-konstantin [PR|wt|]   # Cursor skill
 pr-review-queue artifact --open      # build + open the local review HTML for the newest run
-pr-review-queue post <PR> --preview  # show the exact GitHub-review payload (body + inline)
-pr-review-queue post <PR>            # post one review: body comment + inline comments on diff lines
+pr-review-queue post <PR> --preview  # show payload; posts nothing
+# Real post only after explicit opt-in (draft-only default blocks otherwise):
+PR_REVIEW_ALLOW_POST=1 pr-review-queue post <PR>
 ```
 
 `/pr-review-queue` drives the three layers itself: it prepares the manifest, fans out
-the 8 agents per PR, synthesizes each draft, builds the artifact, and then stops for
-your per-PR approval before posting.
+the 8 agents per PR, synthesizes each draft, builds the artifact, and then stops.
+**Cursor / SDLC never post** — local review file + drafts only (same as chris/nicolas).
+Claude Code interactive posting still requires per-PR approval + `PR_REVIEW_ALLOW_POST=1`.
 
 ### Where things go (never in the target repo)
 

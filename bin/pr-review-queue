@@ -499,6 +499,11 @@ cmd_post() {
     --dir) dir="$2"; shift 2;;
     --preview) preview=1; shift;;
     *) shift;; esac; done
+  # Cursor / SDLC default: drafts stay local. Real post only after explicit opt-in
+  # (user said "post to GitHub" / etc.) → PR_REVIEW_ALLOW_POST=1 for this invocation.
+  if [ "$preview" != "1" ] && [ "${PR_REVIEW_DRAFT_ONLY:-1}" = "1" ] && [ "${PR_REVIEW_ALLOW_POST:-0}" != "1" ]; then
+    die "post blocked (draft-only / SDLC policy). Keep DRAFT-COMMENT.md local. After explicit user opt-in: PR_REVIEW_ALLOW_POST=1 pr-review-queue post ${pr}"
+  fi
   if [ -z "$dir" ]; then
     dir="$(ls -dt "${BASE_DIR}/queue/"*/"pr${pr}" 2>/dev/null | head -1)"
   fi

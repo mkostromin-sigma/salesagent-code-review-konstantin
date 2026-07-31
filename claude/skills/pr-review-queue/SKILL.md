@@ -126,20 +126,32 @@ per PR, by the postable comment, the inline comments, and the full findings
 over the complete data in the page, not a chat distillation. Point the user at the
 file; do not paraphrase it back.
 
-Then, per PR:
+### Cursor / salesagent-sdlc (HARD — match SDLC / nicolas)
+
+**Stop here.** Do **not** run `pr-review-queue post` (except optional `--preview`).
+Write the canonical local review under `~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md`
+when actionable. Drafts stay local. SDLC Phase 3 never publishes to GitHub.
+
+Bin default `PR_REVIEW_DRAFT_ONLY=1` rejects real posts until the user opts in and you set
+`PR_REVIEW_ALLOW_POST=1` for that one invocation.
+
+### Claude Code interactive / explicit opt-in only
+
+Then, per PR **only after clear user approval to publish**:
 1. The artifact is the working surface. If the user edits the body or the inline JSON,
    re-run `pr-review-queue artifact` to regenerate (same input -> same page).
-2. Wait for explicit approval per PR.
+2. Wait for explicit approval per PR (not implied by “review this PR”).
 3. Preview the exact payload, then on approval post it as ONE GitHub review (body +
    inline comments at the cited diff lines; anchors are validated against the diff,
    out-of-diff ones dropped with a warning):
 
 ```bash
-pr-review-queue post <PR> --preview   # show body + inline anchors, post nothing
-pr-review-queue post <PR>             # post the review
+pr-review-queue post <PR> --preview              # show body + inline anchors, post nothing
+PR_REVIEW_ALLOW_POST=1 pr-review-queue post <PR> # post (draft-only gate open)
 ```
 
-Do NOT post without per-PR approval. Do NOT batch-post silently.
+Do NOT post without per-PR approval. Do NOT batch-post silently. Do NOT treat SDLC
+Phase 3 or a Cursor slash invoke as approval.
 
 ## Cleanup
 

@@ -62,6 +62,8 @@ Queue scratch only (FINDINGS / drafts / HTML — not what Phase 4 greps):
 
 SDLC Phase 3 always uses **PR mode** (leaf PR from Phase 2). Working-tree mode is for standalone `/salesagent-code-review-konstantin` (empty/`wt`/paths) before a PR exists.
 
+**GitHub post (HARD — same as SDLC / nicolas):** never publish from Cursor/SDLC. Drafts stay local. Real `pr-review-queue post` needs explicit user opt-in this turn + `PR_REVIEW_ALLOW_POST=1` (`PR_REVIEW_DRAFT_ONLY=1` by default).
+
 **Model:** Cursor / SDLC path always omits Task `model` (Auto inherit) — never pin Anthropic/GPT/Composer/Grok.
 
 ## Git remotes (HARD)

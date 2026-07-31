@@ -47,12 +47,15 @@ cat > "$CFG_DIR/config" <<EOF
 # Canonical review: ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md
 # (archive with mv → ~/.cursor/reviews/done/). Queue scratch (FINDINGS/drafts/HTML):
 : "\${PR_REVIEW_HOME:=${QUEUE_HOME}}"
+# Draft-only by default (Cursor/SDLC). Real post needs user opt-in + PR_REVIEW_ALLOW_POST=1:
+: "\${PR_REVIEW_DRAFT_ONLY:=1}"
 # Default PR checkouts: <repo>/.git/.worktrees/pr-<N> (and pr-<N>-1, …).
 # Legacy sibling base (only if PR_REVIEW_USE_LEGACY_WT_BASE=1):
 : "\${PR_REVIEW_WT_BASE:=${WT_BASE_DEFAULT}}"
 EOF
 echo "review  -> ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md (archive -> reviews/done/)"
 echo "scratch -> ${QUEUE_HOME}/<owner>-<repo>/queue/<stamp>/"
+echo "post    -> blocked by default (PR_REVIEW_DRAFT_ONLY=1); opt-in: PR_REVIEW_ALLOW_POST=1"
 echo "PR lanes: <salesagent>/.git/.worktrees/pr-<N> (legacy WT_BASE=${WT_BASE_DEFAULT} if enabled)"
 
 echo
