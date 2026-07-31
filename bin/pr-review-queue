@@ -571,9 +571,22 @@ cmd_hydrate() {
     dir="$(ls -dt "${BASE_DIR}/queue/"*/"pr${pr}" 2>/dev/null | head -1)"
   fi
   [ -n "$dir" ] || die "no review dir for PR #${pr} (run 'manifest ${pr}' first, or pass --dir)"
-  local wt="${WT_BASE}/${WT_PREFIX}${pr}"
+  local wt=""
+  local cand
+  for cand in \
+    "${PR_REVIEW_CHECKOUT:-}" \
+    "${WT_PATH:-}" \
+    "${LANES_DIR}/pr-${pr}" \
+    "${LANES_DIR}/pr-${pr}-1" \
+    "${LANES_DIR}/pr-${pr}-2" \
+    "${WT_BASE}/${WT_PREFIX}${pr}"
+  do
+    [ -n "$cand" ] && [ -d "$cand" ] || continue
+    wt="$cand"
+    break
+  done
   log "review dir: ${dir}"
-  [ -d "$wt" ] && log "worktree:   ${wt} (branch pr-${pr}-review, at PR head)"
+  [ -n "$wt" ] && log "worktree:   ${wt}"
   cat <<EOF
 I'm continuing a multi-agent code review of PR #${pr} (prebid/salesagent). The
 review already ran; its artifacts are in the main repo (absolute paths, readable
