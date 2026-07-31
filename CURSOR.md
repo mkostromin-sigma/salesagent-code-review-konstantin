@@ -58,7 +58,7 @@ SDLC launches this skill as **Reviewer C** in parallel with:
 
 Queue scratch only (FINDINGS / drafts / HTML — not what Phase 4 greps):
 
-`~/.cursor/reports/salesagent-code-review-konstantin/<owner>-<repo>/queue/<stamp>/`
+`~/.cursor/reviews/.konstantin-queue/<owner>-<repo>/queue/<stamp>/`
 
 SDLC Phase 3 always uses **PR mode** (leaf PR from Phase 2). Working-tree mode is for standalone `/salesagent-code-review-konstantin` (empty/`wt`/paths) before a PR exists.
 

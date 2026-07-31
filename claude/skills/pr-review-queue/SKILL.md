@@ -26,7 +26,7 @@ every Task (8 agents + synthesis) **omits** `model` (inherit Auto). Never pin
 **Cursor review file (HARD):** actionable findings go to
 `~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md` (same trio as
 chris/nicolas). After fix+push: `mv` → `~/.cursor/reviews/done/` (never `rm`).
-Queue run dirs under `~/.cursor/reports/…` are scratch only.
+Queue run dirs under `~/.cursor/reviews/.konstantin-queue/…` are scratch only.
 
 Three layers. You run this skill; it drives all three and STOPS for your approval
 before anything reaches GitHub. There is no separate orchestration engine — the skill

@@ -33,7 +33,7 @@ Layer 1: $REPO/bin/pr-review-queue manifest <N> | manifest wt
 Review (canonical): ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md
                  or ~/.cursor/reviews/wt-salesagent-code-review-konstantin.md
 Archive when done:  mv → ~/.cursor/reviews/done/  (never rm; same as chris/nicolas)
-Queue scratch only: ~/.cursor/reports/salesagent-code-review-konstantin/…/queue/<stamp>/
+Queue scratch only: ~/.cursor/reviews/.konstantin-queue/…/queue/<stamp>/
 GitHub post: opt-in only (PR mode); wt mode cannot post
 Checkout: Documents/code/sigma/salesagent-code-review-konstantin
 ```
@@ -179,7 +179,7 @@ Rules:
 2. On re-review of the same target, **overwrite** the same path (one current file per target) unless the user asks to keep history.
 3. Write the file when actionable findings exist; if the synthesized list is empty — **do not** write it; say clean in chat only.
 4. **Archive (HARD):** after all findings from that file are fixed and pushed, `mv` it to `~/.cursor/reviews/done/` — **never `rm`**. Outstanding work = root `reviews/` only; ignore `done/` as open work. (SDLC / Dev / Q1-B share this rule.)
-5. Queue scratch (`FINDINGS.md` / drafts / HTML under `~/.cursor/reports/salesagent-code-review-konstantin/…`) is internal to the 8+1 fan-out — optional pointer in the review file; not archived by this skill; not what Phase 4 greps.
+5. Queue scratch (`FINDINGS.md` / drafts / HTML under `~/.cursor/reviews/.konstantin-queue/…`) is internal to the 8+1 fan-out — optional pointer in the review file; not archived by this skill; not what Phase 4 greps (root `pr-*-*.md` only).
 
 File contents (English):
 

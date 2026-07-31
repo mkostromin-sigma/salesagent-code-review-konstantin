@@ -53,9 +53,11 @@ REPO_SLUG="${REPO//\//-}"
 # Optional config (written by install.sh) may set PR_REVIEW_HOME / legacy WT_BASE.
 PR_REVIEW_CFG="${XDG_CONFIG_HOME:-${HOME}/.config}/pr-review-queue/config"
 [ -f "$PR_REVIEW_CFG" ] && . "$PR_REVIEW_CFG"
-# Run artifacts under ~/.cursor/reports (personal Cursor layout) — never the
-# salesagent tree. Override with PR_REVIEW_HOME.
-PR_REVIEW_HOME="${PR_REVIEW_HOME:-${HOME}/.cursor/reports/salesagent-code-review-konstantin}"
+# Queue scratch under ~/.cursor/reviews/.konstantin-queue/ (not reports/; not
+# actionable pr-*-*.md at reviews root). Canonical review =
+# ~/.cursor/reviews/pr-<N>-salesagent-code-review-konstantin.md
+# Override with PR_REVIEW_HOME.
+PR_REVIEW_HOME="${PR_REVIEW_HOME:-${HOME}/.cursor/reviews/.konstantin-queue}"
 BASE_DIR="${PR_REVIEW_HOME}/${REPO_SLUG}"
 mkdir -p "$BASE_DIR"
 WT_BASE="${PR_REVIEW_WT_BASE:-${HOME}/Documents/code/sigma}"
