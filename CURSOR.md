@@ -27,14 +27,14 @@ Targets:
 
 ```bash
 # From a salesagent checkout:
-pr-review-queue manifest 1699              # PR mode → prefers .git/.worktrees/pr-1699
-WT_PATH=…/.git/.worktrees/pr-1699 pr-review-queue manifest 1699
+pr-review-queue manifest 1699              # auto: .git/.worktrees/pr-1699 or pr-1699-1…
 pr-review-queue manifest wt                # working tree vs merge-base(main)
 pr-review-queue manifest wt --base upstream/main -- src/core/
 ```
 
 PR checkouts live under **`salesagent/.git/.worktrees/`** (same canon as
-`salesagent-dev` / `ensure-pr-worktree.sh`):
+`salesagent-dev` / `ensure-pr-worktree.sh`). No `PR_REVIEW_CHECKOUT` export needed
+when the Dev lane is the usual `pr-<N>` path.
 
 | Path | Role |
 |---|---|
